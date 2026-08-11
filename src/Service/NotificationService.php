@@ -8,6 +8,7 @@ use App\Notifying\Entity\NotificationEntity;
 use App\Notifying\Entity\NotificationRecipientEntity;
 use App\Notifying\Enum\NotificationPriority;
 use App\Notifying\Enum\RecipientType;
+use App\Notifying\Repository\NotificationRecipientRepository;
 use App\Notifying\Repository\NotificationRepository;
 use App\Notifying\ValueObject\NotificationIntent;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,6 +18,7 @@ final class NotificationService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly NotificationRepository $notificationRepository,
+        private readonly NotificationRecipientRepository $recipientRepository,
     ) {
     }
 
@@ -93,14 +95,24 @@ final class NotificationService
             $this->entityManager->persist($notification);
         }
 
-        $recipient = new NotificationRecipientEntity(
-            id: self::newUuid(),
-            notification: $notification,
-            recipientType: $intent->recipientType,
-            recipientKey: $intent->recipientKey,
-            createdBy: $createdBy,
-        );
-        $this->entityManager->persist($recipient);
+        $recipient = null;
+        if ($existing instanceof NotificationEntity) {
+            $recipient = $this->recipientRepository->findForNotification($existing, $intent->recipientType, $intent->recipientKey);
+        }
+
+        $recipientCreated = false;
+        if (!$recipient instanceof NotificationRecipientEntity) {
+            $recipient = new NotificationRecipientEntity(
+                id: self::newUuid(),
+                notification: $notification,
+                recipientType: $intent->recipientType,
+                recipientKey: $intent->recipientKey,
+                createdBy: $createdBy,
+            );
+            $this->entityManager->persist($recipient);
+            $recipientCreated = true;
+        }
+
         $this->entityManager->flush();
 
         return [
@@ -110,6 +122,7 @@ final class NotificationService
             'topic' => $notification->topic(),
             'status' => $recipient->status()->value,
             'created' => null === $existing,
+            'recipientCreated' => $recipientCreated,
         ];
     }
 

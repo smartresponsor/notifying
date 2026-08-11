@@ -11,6 +11,7 @@
 /coverage/
 /.idea/
 /.vscode/
+/.console-mcp/
 *.log
 *.tmp
 *.bak

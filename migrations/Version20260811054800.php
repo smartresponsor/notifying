@@ -16,41 +16,128 @@ final class Version20260811054800 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('CREATE TABLE notifying_notification (id UUID NOT NULL, source_component VARCHAR(80) NOT NULL, event_name VARCHAR(120) NOT NULL, topic VARCHAR(120) NOT NULL, title VARCHAR(200) NOT NULL, body TEXT NOT NULL, priority VARCHAR(255) NOT NULL, status VARCHAR(255) NOT NULL, correlation_id VARCHAR(190) DEFAULT NULL, action_url VARCHAR(500) DEFAULT NULL, expires_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, payload JSON NOT NULL, metadata JSON NOT NULL, object_uuid BYTEA NOT NULL, object_slug VARCHAR(190) NOT NULL, object_created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, object_modified_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, object_created_by VARCHAR(190) DEFAULT NULL, object_modified_by VARCHAR(190) DEFAULT NULL, object_first_title VARCHAR(255) DEFAULT NULL, object_middle_title TEXT DEFAULT NULL, object_last_title TEXT DEFAULT NULL, PRIMARY KEY(id))');
-        $this->addSql('CREATE UNIQUE INDEX uniq_notifying_notification_object_uuid ON notifying_notification (object_uuid)');
-        $this->addSql('CREATE UNIQUE INDEX uniq_notifying_notification_object_slug ON notifying_notification (object_slug)');
-        $this->addSql('CREATE INDEX idx_notifying_notification_source_event ON notifying_notification (source_component, event_name)');
-        $this->addSql('CREATE INDEX idx_notifying_notification_topic ON notifying_notification (topic)');
-        $this->addSql('CREATE INDEX idx_notifying_notification_status ON notifying_notification (status)');
-        $this->addSql('CREATE INDEX idx_notifying_notification_correlation ON notifying_notification (correlation_id)');
+        $notification = $schema->createTable('notifying_notification');
+        $notification->addColumn('id', 'guid');
+        $notification->addColumn('source_component', 'string', ['length' => 80]);
+        $notification->addColumn('event_name', 'string', ['length' => 120]);
+        $notification->addColumn('topic', 'string', ['length' => 120]);
+        $notification->addColumn('title', 'string', ['length' => 200]);
+        $notification->addColumn('body', 'text');
+        $notification->addColumn('priority', 'string', ['length' => 255]);
+        $notification->addColumn('status', 'string', ['length' => 255]);
+        $notification->addColumn('correlation_id', 'string', ['length' => 190, 'notnull' => false]);
+        $notification->addColumn('action_url', 'string', ['length' => 500, 'notnull' => false]);
+        $notification->addColumn('expires_at', 'datetime_immutable', ['notnull' => false]);
+        $notification->addColumn('payload', 'json');
+        $notification->addColumn('metadata', 'json');
+        $this->addIdentityColumns($notification);
+        $this->addAuditColumns($notification);
+        $this->addTitleColumns($notification);
+        $notification->setPrimaryKey(['id']);
+        $notification->addUniqueIndex(['object_uuid'], 'UNIQ_9E3FBB5F4C6A6CB5');
+        $notification->addUniqueIndex(['object_slug'], 'UNIQ_9E3FBB5F588A771');
+        $notification->addIndex(['source_component', 'event_name'], 'idx_notifying_notification_source_event');
+        $notification->addIndex(['topic'], 'idx_notifying_notification_topic');
+        $notification->addIndex(['status'], 'idx_notifying_notification_status');
+        $notification->addIndex(['correlation_id'], 'idx_notifying_notification_correlation');
 
-        $this->addSql('CREATE TABLE notifying_notification_recipient (id UUID NOT NULL, notification_id UUID NOT NULL, recipient_type VARCHAR(255) NOT NULL, recipient_key VARCHAR(160) NOT NULL, status VARCHAR(255) NOT NULL, read_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, acked_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, snoozed_until TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, muted_until TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, archived_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, object_uuid BYTEA NOT NULL, object_slug VARCHAR(190) NOT NULL, object_created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, object_modified_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, object_created_by VARCHAR(190) DEFAULT NULL, object_modified_by VARCHAR(190) DEFAULT NULL, PRIMARY KEY(id))');
-        $this->addSql('CREATE UNIQUE INDEX uniq_notifying_recipient_object_uuid ON notifying_notification_recipient (object_uuid)');
-        $this->addSql('CREATE UNIQUE INDEX uniq_notifying_recipient_object_slug ON notifying_notification_recipient (object_slug)');
-        $this->addSql('CREATE INDEX idx_notifying_recipient_inbox ON notifying_notification_recipient (recipient_key, status, object_created_at)');
-        $this->addSql('CREATE INDEX idx_notifying_recipient_notification ON notifying_notification_recipient (notification_id)');
-        $this->addSql('CREATE INDEX idx_notifying_recipient_snoozed ON notifying_notification_recipient (snoozed_until)');
-        $this->addSql('ALTER TABLE notifying_notification_recipient ADD CONSTRAINT fk_notifying_recipient_notification FOREIGN KEY (notification_id) REFERENCES notifying_notification (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
+        $recipient = $schema->createTable('notifying_notification_recipient');
+        $recipient->addColumn('id', 'guid');
+        $recipient->addColumn('notification_id', 'guid');
+        $recipient->addColumn('recipient_type', 'string', ['length' => 255]);
+        $recipient->addColumn('recipient_key', 'string', ['length' => 160]);
+        $recipient->addColumn('status', 'string', ['length' => 255]);
+        $recipient->addColumn('read_at', 'datetime_immutable', ['notnull' => false]);
+        $recipient->addColumn('acked_at', 'datetime_immutable', ['notnull' => false]);
+        $recipient->addColumn('snoozed_until', 'datetime_immutable', ['notnull' => false]);
+        $recipient->addColumn('muted_until', 'datetime_immutable', ['notnull' => false]);
+        $recipient->addColumn('archived_at', 'datetime_immutable', ['notnull' => false]);
+        $this->addIdentityColumns($recipient);
+        $this->addAuditColumns($recipient);
+        $recipient->setPrimaryKey(['id']);
+        $recipient->addUniqueIndex(['object_uuid'], 'UNIQ_44AC95614C6A6CB5');
+        $recipient->addUniqueIndex(['object_slug'], 'UNIQ_44AC9561588A771');
+        $recipient->addIndex(['recipient_key', 'status', 'object_created_at'], 'idx_notifying_recipient_inbox');
+        $recipient->addIndex(['notification_id'], 'idx_notifying_recipient_notification');
+        $recipient->addIndex(['snoozed_until'], 'idx_notifying_recipient_snoozed');
+        $recipient->addForeignKeyConstraint('notifying_notification', ['notification_id'], ['id'], ['onDelete' => 'CASCADE'], 'fk_notifying_recipient_notification');
 
-        $this->addSql('CREATE TABLE notifying_notification_preference (id UUID NOT NULL, recipient_type VARCHAR(255) NOT NULL, recipient_key VARCHAR(160) NOT NULL, topic VARCHAR(120) NOT NULL, enabled_channels JSON NOT NULL, disabled_channels JSON NOT NULL, muted BOOLEAN NOT NULL, muted_until TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, quiet_hours_start VARCHAR(5) DEFAULT NULL, quiet_hours_end VARCHAR(5) DEFAULT NULL, timezone VARCHAR(80) DEFAULT NULL, digest_enabled BOOLEAN NOT NULL, digest_frequency VARCHAR(40) DEFAULT NULL, policy JSON NOT NULL, object_uuid BYTEA NOT NULL, object_slug VARCHAR(190) NOT NULL, object_created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, object_modified_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, object_created_by VARCHAR(190) DEFAULT NULL, object_modified_by VARCHAR(190) DEFAULT NULL, object_first_title VARCHAR(255) DEFAULT NULL, object_middle_title TEXT DEFAULT NULL, object_last_title TEXT DEFAULT NULL, PRIMARY KEY(id))');
-        $this->addSql('CREATE UNIQUE INDEX uniq_notifying_pref_object_uuid ON notifying_notification_preference (object_uuid)');
-        $this->addSql('CREATE UNIQUE INDEX uniq_notifying_pref_object_slug ON notifying_notification_preference (object_slug)');
-        $this->addSql('CREATE UNIQUE INDEX uniq_notifying_pref_recipient_topic ON notifying_notification_preference (recipient_type, recipient_key, topic)');
-        $this->addSql('CREATE INDEX idx_notifying_pref_recipient ON notifying_notification_preference (recipient_key)');
+        $preference = $schema->createTable('notifying_notification_preference');
+        $preference->addColumn('id', 'guid');
+        $preference->addColumn('recipient_type', 'string', ['length' => 255]);
+        $preference->addColumn('recipient_key', 'string', ['length' => 160]);
+        $preference->addColumn('topic', 'string', ['length' => 120]);
+        $preference->addColumn('enabled_channels', 'json');
+        $preference->addColumn('disabled_channels', 'json');
+        $preference->addColumn('muted', 'boolean');
+        $preference->addColumn('muted_until', 'datetime_immutable', ['notnull' => false]);
+        $preference->addColumn('quiet_hours_start', 'string', ['length' => 5, 'notnull' => false]);
+        $preference->addColumn('quiet_hours_end', 'string', ['length' => 5, 'notnull' => false]);
+        $preference->addColumn('timezone', 'string', ['length' => 80, 'notnull' => false]);
+        $preference->addColumn('digest_enabled', 'boolean');
+        $preference->addColumn('digest_frequency', 'string', ['length' => 40, 'notnull' => false]);
+        $preference->addColumn('policy', 'json');
+        $this->addIdentityColumns($preference);
+        $this->addAuditColumns($preference);
+        $this->addTitleColumns($preference);
+        $preference->setPrimaryKey(['id']);
+        $preference->addUniqueIndex(['object_uuid'], 'UNIQ_68F0B0C74C6A6CB5');
+        $preference->addUniqueIndex(['object_slug'], 'UNIQ_68F0B0C7588A771');
+        $preference->addUniqueIndex(['recipient_type', 'recipient_key', 'topic'], 'uniq_notifying_pref_recipient_topic');
+        $preference->addIndex(['recipient_key'], 'idx_notifying_pref_recipient');
 
-        $this->addSql('CREATE TABLE notifying_notification_subscription (id UUID NOT NULL, recipient_type VARCHAR(255) NOT NULL, recipient_key VARCHAR(160) NOT NULL, platform VARCHAR(80) NOT NULL, app_key VARCHAR(120) NOT NULL, device_id VARCHAR(190) NOT NULL, token TEXT NOT NULL, token_hash VARCHAR(64) NOT NULL, enabled BOOLEAN NOT NULL, last_seen_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, disabled_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, expires_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, metadata JSON NOT NULL, object_uuid BYTEA NOT NULL, object_slug VARCHAR(190) NOT NULL, object_created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, object_modified_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, object_created_by VARCHAR(190) DEFAULT NULL, object_modified_by VARCHAR(190) DEFAULT NULL, object_first_title VARCHAR(255) DEFAULT NULL, object_middle_title TEXT DEFAULT NULL, object_last_title TEXT DEFAULT NULL, PRIMARY KEY(id))');
-        $this->addSql('CREATE UNIQUE INDEX uniq_notifying_subscription_object_uuid ON notifying_notification_subscription (object_uuid)');
-        $this->addSql('CREATE UNIQUE INDEX uniq_notifying_subscription_object_slug ON notifying_notification_subscription (object_slug)');
-        $this->addSql('CREATE UNIQUE INDEX uniq_notifying_subscription_token_hash ON notifying_notification_subscription (token_hash)');
-        $this->addSql('CREATE INDEX idx_notifying_subscription_recipient ON notifying_notification_subscription (recipient_key, enabled)');
-        $this->addSql('CREATE INDEX idx_notifying_subscription_device ON notifying_notification_subscription (app_key, platform, device_id)');
+        $subscription = $schema->createTable('notifying_notification_subscription');
+        $subscription->addColumn('id', 'guid');
+        $subscription->addColumn('recipient_type', 'string', ['length' => 255]);
+        $subscription->addColumn('recipient_key', 'string', ['length' => 160]);
+        $subscription->addColumn('platform', 'string', ['length' => 80]);
+        $subscription->addColumn('app_key', 'string', ['length' => 120]);
+        $subscription->addColumn('device_id', 'string', ['length' => 190]);
+        $subscription->addColumn('token', 'text');
+        $subscription->addColumn('token_hash', 'string', ['length' => 64]);
+        $subscription->addColumn('enabled', 'boolean');
+        $subscription->addColumn('last_seen_at', 'datetime_immutable', ['notnull' => false]);
+        $subscription->addColumn('disabled_at', 'datetime_immutable', ['notnull' => false]);
+        $subscription->addColumn('expires_at', 'datetime_immutable', ['notnull' => false]);
+        $subscription->addColumn('metadata', 'json');
+        $this->addIdentityColumns($subscription);
+        $this->addAuditColumns($subscription);
+        $this->addTitleColumns($subscription);
+        $subscription->setPrimaryKey(['id']);
+        $subscription->addUniqueIndex(['object_uuid'], 'UNIQ_B6EB1E544C6A6CB5');
+        $subscription->addUniqueIndex(['object_slug'], 'UNIQ_B6EB1E54588A771');
+        $subscription->addUniqueIndex(['token_hash'], 'uniq_notifying_subscription_token_hash');
+        $subscription->addIndex(['recipient_key', 'enabled'], 'idx_notifying_subscription_recipient');
+        $subscription->addIndex(['app_key', 'platform', 'device_id'], 'idx_notifying_subscription_device');
     }
 
     public function down(Schema $schema): void
     {
-        $this->addSql('DROP TABLE notifying_notification_subscription');
-        $this->addSql('DROP TABLE notifying_notification_preference');
-        $this->addSql('DROP TABLE notifying_notification_recipient');
-        $this->addSql('DROP TABLE notifying_notification');
+        foreach (['notifying_notification_subscription', 'notifying_notification_preference', 'notifying_notification_recipient', 'notifying_notification'] as $tableName) {
+            if ($schema->hasTable($tableName)) {
+                $schema->dropTable($tableName);
+            }
+        }
+    }
+
+    private function addIdentityColumns(\Doctrine\DBAL\Schema\Table $table): void
+    {
+        $table->addColumn('object_uuid', 'binary', ['length' => 16, 'fixed' => true]);
+        $table->addColumn('object_slug', 'string', ['length' => 190]);
+    }
+
+    private function addAuditColumns(\Doctrine\DBAL\Schema\Table $table): void
+    {
+        $table->addColumn('object_created_at', 'datetime_immutable');
+        $table->addColumn('object_modified_at', 'datetime_immutable', ['notnull' => false]);
+        $table->addColumn('object_created_by', 'string', ['length' => 190, 'notnull' => false]);
+        $table->addColumn('object_modified_by', 'string', ['length' => 190, 'notnull' => false]);
+    }
+
+    private function addTitleColumns(\Doctrine\DBAL\Schema\Table $table): void
+    {
+        $table->addColumn('object_first_title', 'string', ['length' => 255, 'notnull' => false]);
+        $table->addColumn('object_middle_title', 'text', ['notnull' => false]);
+        $table->addColumn('object_last_title', 'text', ['notnull' => false]);
     }
 }

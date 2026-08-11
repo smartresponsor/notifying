@@ -3,7 +3,8 @@
 /var/
 /vendor/
 /public/bundles/
-/composer.lock
+/config/reference.php
+/bin/notifying-console-diagnose.ps1
 /phpunit.xml
 /.phpunit.cache/
 /coverage/

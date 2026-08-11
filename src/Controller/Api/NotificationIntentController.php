@@ -4,24 +4,24 @@ declare(strict_types=1);
 
 namespace App\Notifying\Controller\Api;
 
-use App\Notifying\Service\NotificationSubscriptionService;
+use App\Notifying\Service\NotificationService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class NotificationSubscriptionController extends AbstractController
+final class NotificationIntentController extends AbstractController
 {
     public function __construct(
-        private readonly NotificationSubscriptionService $subscriptionService,
+        private readonly NotificationService $notificationService,
     ) {
     }
 
-    #[Route('/api/notification/subscription', name: 'notifying_api_notification_subscription', methods: ['POST'])]
-    public function register(Request $request): JsonResponse
+    #[Route('/api/notification/intent', name: 'notifying_api_notification_intent', methods: ['POST'])]
+    public function ingest(Request $request): JsonResponse
     {
         try {
-            $subscription = $this->subscriptionService->registerSubscription($request->toArray());
+            $result = $this->notificationService->ingest($request->toArray());
         } catch (\InvalidArgumentException $exception) {
             return $this->json([
                 'ok' => false,
@@ -31,7 +31,7 @@ final class NotificationSubscriptionController extends AbstractController
 
         return $this->json([
             'ok' => true,
-            'subscription' => $subscription,
-        ]);
+            'notification' => $result,
+        ], 201);
     }
 }

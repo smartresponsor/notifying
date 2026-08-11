@@ -21,10 +21,14 @@ final class NotificationInboxController extends AbstractController
     public function inbox(Request $request): JsonResponse
     {
         $recipientKey = (string) $request->query->get('recipientKey', '');
+        $limit = (int) $request->query->get('limit', 50);
+        $offset = (int) $request->query->get('offset', 0);
 
         return $this->json([
             'ok' => true,
-            'items' => $this->inboxService->listInbox($recipientKey),
+            'items' => $this->inboxService->listInbox($recipientKey, $limit, $offset),
+            'limit' => max(1, min(100, $limit)),
+            'offset' => max(0, $offset),
         ]);
     }
 

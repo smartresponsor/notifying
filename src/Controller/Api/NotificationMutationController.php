@@ -21,9 +21,9 @@ final class NotificationMutationController extends AbstractController
     public function markRead(Request $request): JsonResponse
     {
         $payload = $request->toArray();
-        $notificationIds = array_values(array_filter(array_map('strval', $payload['notificationIds'] ?? [])));
+        $entryIds = array_values(array_filter(array_map('strval', $payload['recipientEntryIds'] ?? $payload['notificationIds'] ?? [])));
 
-        $updated = $this->inboxService->markRead($notificationIds);
+        $updated = $this->inboxService->markRead($entryIds);
 
         return $this->json([
             'ok' => true,
@@ -35,11 +35,36 @@ final class NotificationMutationController extends AbstractController
     public function ack(Request $request): JsonResponse
     {
         $payload = $request->toArray();
-        $notificationId = (string) ($payload['notificationId'] ?? '');
+        $entryId = (string) ($payload['recipientEntryId'] ?? $payload['notificationId'] ?? '');
 
         return $this->json([
             'ok' => true,
-            'acked' => $this->inboxService->ack($notificationId),
+            'acked' => $this->inboxService->ack($entryId),
+        ]);
+    }
+
+    #[Route('/api/notification/archive', name: 'notifying_api_notification_archive', methods: ['POST'])]
+    public function archive(Request $request): JsonResponse
+    {
+        $payload = $request->toArray();
+        $entryId = (string) ($payload['recipientEntryId'] ?? '');
+
+        return $this->json([
+            'ok' => true,
+            'archived' => $this->inboxService->archive($entryId),
+        ]);
+    }
+
+    #[Route('/api/notification/snooze', name: 'notifying_api_notification_snooze', methods: ['POST'])]
+    public function snooze(Request $request): JsonResponse
+    {
+        $payload = $request->toArray();
+        $entryId = (string) ($payload['recipientEntryId'] ?? '');
+        $until = new \DateTimeImmutable((string) ($payload['until'] ?? '+1 hour'));
+
+        return $this->json([
+            'ok' => true,
+            'snoozed' => $this->inboxService->snooze($entryId, $until),
         ]);
     }
 }

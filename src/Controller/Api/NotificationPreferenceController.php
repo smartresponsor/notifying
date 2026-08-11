@@ -20,7 +20,14 @@ final class NotificationPreferenceController extends AbstractController
     #[Route('/api/notification/pref', name: 'notifying_api_notification_pref', methods: ['POST'])]
     public function upsert(Request $request): JsonResponse
     {
-        $preference = $this->preferenceService->upsertPreference($request->toArray());
+        try {
+            $preference = $this->preferenceService->upsertPreference($request->toArray());
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json([
+                'ok' => false,
+                'error' => $exception->getMessage(),
+            ], 400);
+        }
 
         return $this->json([
             'ok' => true,

@@ -24,6 +24,8 @@ final readonly class NotificationIntent
         public array $payload = [],
         public array $metadata = [],
         public ?string $correlationId = null,
+        public string $topic = 'default',
+        public ?string $actionUrl = null,
     ) {
     }
 }

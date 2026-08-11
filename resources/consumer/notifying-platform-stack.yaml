@@ -1,0 +1,25 @@
+platform_stack_contract_version: 1
+component: Notifying
+namespace: App\Notifying
+mandatory_stack:
+  easyadmin:
+    package: easycorp/easyadmin-bundle
+    responsibility: internal_back_office
+  objecting:
+    package: objecting/object
+    responsibility: system_field_packs
+    manifest: resources/consumer/notifying-object-field-packs.yaml
+  interfacing:
+    package: interfacing/interface
+    responsibility: shared_interface_templates
+  viewing:
+    package: viewing/view
+    responsibility: rendering_boundary
+  cruding:
+    package: cruding/crud
+    responsibility: crud_route_grammar
+    config: config/packages/cruding.yaml
+    runtime_lock: config/kernel/runtime_scope.lock.php
+component_ownership:
+  - entities
+  - migrations

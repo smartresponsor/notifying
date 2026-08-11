@@ -1,0 +1,32 @@
+object_field_pack_consumer_contract_version: 1
+component: Notifying
+namespace: App\Notifying
+backend_owns_entities: true
+backend_owns_migrations: true
+objecting_dependency: objecting/object
+baseline:
+  required_packs:
+    - object_identity
+    - object_audit
+  optional_packs:
+    - object_title
+entities:
+  App\Notifying\Entity\NotificationEntity:
+    table: notifying_notification
+    effective_packs:
+      - object_identity
+      - object_audit
+      - object_title
+  App\Notifying\Entity\NotificationRecipientEntity:
+    table: notifying_notification_recipient
+    effective_packs:
+      - object_identity
+      - object_audit
+  App\Notifying\Entity\NotificationPreferenceEntity:
+    table: notifying_notification_preference
+    effective_packs:
+      - object_identity
+      - object_audit
+      - object_title
+  App\Notifying\Entity\NotificationSubscriptionEntity:
+    table: notifying_notification_subscription

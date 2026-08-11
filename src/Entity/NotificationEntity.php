@@ -7,13 +7,23 @@ namespace App\Notifying\Entity;
 use App\Notifying\Enum\NotificationPriority;
 use App\Notifying\Enum\NotificationStatus;
 use App\Notifying\Repository\NotificationRepository;
+use App\Objecting\EntityInterface\ObjectAuditedInterface;
+use App\Objecting\EntityInterface\ObjectIdentifiedInterface;
+use App\Objecting\EntityInterface\ObjectTitledInterface;
+use App\Objecting\EntityTrait\Embeddable\ObjectAuditEmbeddableTrait;
+use App\Objecting\EntityTrait\Embeddable\ObjectIdentityEmbeddableTrait;
+use App\Objecting\EntityTrait\Embeddable\ObjectTitleEmbeddableTrait;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: NotificationRepository::class)]
 #[ORM\Table(name: 'notifying_notification')]
-class NotificationEntity
+class NotificationEntity implements ObjectIdentifiedInterface, ObjectAuditedInterface, ObjectTitledInterface
 {
+    use ObjectIdentityEmbeddableTrait;
+    use ObjectAuditEmbeddableTrait;
+    use ObjectTitleEmbeddableTrait;
+
     #[ORM\Id]
     #[ORM\Column(type: Types::GUID)]
     private string $id;
@@ -42,22 +52,22 @@ class NotificationEntity
     #[ORM\Column(type: Types::JSON)]
     private array $metadata = [];
 
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    private \DateTimeImmutable $createdAt;
-
     public function __construct(
         string $id,
         string $sourceComponent,
         string $eventName,
         string $title,
         string $body,
+        ?string $createdBy = null,
     ) {
         $this->id = $id;
         $this->sourceComponent = $sourceComponent;
         $this->eventName = $eventName;
         $this->title = $title;
         $this->body = $body;
-        $this->createdAt = new \DateTimeImmutable();
+        $this->initializeObjectIdentity(objectUuid: $id);
+        $this->initializeObjectAudit(createdBy: $createdBy);
+        $this->initializeObjectTitle(firstTitle: $title, lastTitle: $eventName);
     }
 
     public function id(): string
@@ -65,13 +75,15 @@ class NotificationEntity
         return $this->id;
     }
 
-    public function markRead(): void
+    public function markRead(?string $modifiedBy = null): void
     {
         $this->status = NotificationStatus::Read;
+        $this->touchModified(modifiedBy: $modifiedBy);
     }
 
-    public function ack(): void
+    public function ack(?string $modifiedBy = null): void
     {
         $this->status = NotificationStatus::Acked;
+        $this->touchModified(modifiedBy: $modifiedBy);
     }
 }

@@ -1,0 +1,10 @@
+cruding:
+  route_guard:
+    runtime_entity_env: APP_RUNTIME_ENTITY_FROM_LOCK
+    runtime_lock_glob: config/kernel/runtime_scope.lock.php
+  entity_class_alias_map:
+    notification: 'App\Notifying\Entity\NotificationEntity'
+    notification-recipient: 'App\Notifying\Entity\NotificationRecipientEntity'
+    notification-preference: 'App\Notifying\Entity\NotificationPreferenceEntity'
+    notification-subscription: 'App\Notifying\Entity\NotificationSubscriptionEntity'
+  form_type_map: []

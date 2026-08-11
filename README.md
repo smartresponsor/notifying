@@ -14,6 +14,22 @@ It owns notification meaning, inbox state, recipient preferences, device subscri
 - No Port/Adapter pattern
 - No `src/Domain/`
 
+## Mandatory platform stack
+
+Notifying is a platform application component and therefore connects the shared SmartResponsor stack:
+
+- EasyAdmin for internal back-office screens and entity CRUD entry points.
+- Objecting for reusable system fields such as identity, audit, and title field packs.
+- Interfacing for shared interface templates and interface shell responsibility.
+- Viewing for the central view/rendering boundary.
+- Cruding for generic CRUD route grammar and entity/resource resolution.
+
+This stack is consumed as Symfony packages. Notifying still owns its own Entity classes, Doctrine migrations, repositories, services, API controllers, mobile contracts, notification policy, inbox behavior, and Dispatch Plan boundary toward Delivering.
+
+The Objecting consumer declaration lives in `resources/consumer/notifying-object-field-packs.yaml` and records the initial field-pack adoption surface. The mandatory stack summary lives in `resources/consumer/notifying-platform-stack.yaml`. The local Cruding runtime placeholder lives in `config/kernel/runtime_scope.lock.php`.
+
+The host application should mount this repository through a Composer path repository and require `smartresponsor/notifying` when Notifying is promoted into the host runtime.
+
 ## Responsibility boundary
 
 ### Notifying owns

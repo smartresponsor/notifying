@@ -1,0 +1,7 @@
+twig:
+  file_name_pattern: '*.twig'
+  globals:
+    interfacing_provider_external_assets_enabled: true
+
+when@test:
+  twig:

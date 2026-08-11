@@ -1,6 +1,6 @@
 doctrine:
   dbal:
-    url: '%env(resolve:DATABASE_URL)%'
+    url: '%env(resolve:default:notifying_database_url:DATABASE_URL)%'
     server_version: '16'
     profiling_collect_backtrace: '%kernel.debug%'
 
@@ -12,4 +12,8 @@ doctrine:
       Notifying:
         type: attribute
         dir: '%kernel.project_dir%/src/Entity'
-        prefix: 'App\\Notifying\\Entity'
+        prefix: 'App\Notifying\Entity'
+      ObjectingEmbeddable:
+        type: attribute
+        dir: '%kernel.project_dir%/vendor/objecting/object/src/Embeddable'
+        prefix: 'App\Objecting\Embeddable'

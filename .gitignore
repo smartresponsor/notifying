@@ -5,6 +5,7 @@
 /public/bundles/
 /config/reference.php
 /bin/notifying-console-diagnose.ps1
+/bin/notifying-runtime-check.ps1
 /phpunit.xml
 /.phpunit.cache/
 /coverage/

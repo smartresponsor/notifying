@@ -87,6 +87,8 @@ Notifying persists `NotificationDispatchPlanEntity` records for each notificatio
 
 The current repository creates inbox and push dispatch plans during intent ingestion. It does not call Symfony Notifier and does not send through providers.
 
+When Mobiling registers a push subscription, Notifying reactivates previously suppressed push plans for that recipient if they were suppressed only because no active subscription existed. Reactivated plans move back to `handoff_ready` and become visible through the dispatch-plan API.
+
 ## Repository layout
 
 ```text

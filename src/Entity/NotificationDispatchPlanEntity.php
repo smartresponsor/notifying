@@ -192,6 +192,19 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
         return $this->metadata;
     }
 
+    /** @param array<string, mixed> $metadata */
+    public function markHandoffReady(string $target, array $metadata = [], ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
+    {
+        $this->status = NotificationDispatchStatus::HandoffReady;
+        $this->reason = 'push-handoff-ready';
+        $this->target = $target;
+        $this->scheduledAt = $at ?? new \DateTimeImmutable();
+        $this->metadata = array_replace($this->metadata, $metadata);
+        $this->failedAt = null;
+        $this->cancelledAt = null;
+        $this->touchModified(modifiedBy: $modifiedBy);
+    }
+
     public function markHandedOff(?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
     {
         $this->status = NotificationDispatchStatus::HandedOff;

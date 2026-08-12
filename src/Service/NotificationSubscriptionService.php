@@ -13,6 +13,7 @@ final class NotificationSubscriptionService
 {
     public function __construct(
         private readonly NotificationSubscriptionRepository $subscriptionRepository,
+        private readonly NotificationDispatchPlanService $dispatchPlanService,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -73,6 +74,13 @@ final class NotificationSubscriptionService
 
         $this->entityManager->flush();
 
+        $reactivatedDispatchPlans = $this->dispatchPlanService->reactivatePushForSubscription(
+            recipientType: $subscription->recipientType(),
+            recipientKey: $subscription->recipientKey(),
+            tokenHash: $subscription->tokenHash(),
+            modifiedBy: $modifiedBy,
+        );
+
         return [
             'recipientType' => $subscription->recipientType()->value,
             'recipientKey' => $subscription->recipientKey(),
@@ -82,6 +90,7 @@ final class NotificationSubscriptionService
             'tokenHash' => $subscription->tokenHash(),
             'enabled' => $subscription->enabled(),
             'created' => $created,
+            'reactivatedDispatchPlans' => $reactivatedDispatchPlans,
         ];
     }
 

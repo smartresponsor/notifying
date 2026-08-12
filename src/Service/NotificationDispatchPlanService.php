@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifying\Service;
 
+use App\Notifying\Enum\RecipientType;
 use App\Notifying\Repository\NotificationDispatchPlanRepository;
 use App\Notifying\Repository\NotificationRecipientRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -32,6 +33,31 @@ final class NotificationDispatchPlanService
         }
 
         return NotificationService::dispatchPlanSummary($this->dispatchPlanRepository->listPending($limit));
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function reactivatePushForSubscription(RecipientType $recipientType, string $recipientKey, string $tokenHash, ?string $modifiedBy = null): array
+    {
+        if ('' === $recipientKey || '' === $tokenHash) {
+            return [];
+        }
+
+        $plans = $this->dispatchPlanRepository->listSuppressedPushForRecipient($recipientType, $recipientKey);
+        foreach ($plans as $plan) {
+            $plan->markHandoffReady(
+                target: 'subscription:'.$tokenHash,
+                metadata: ['handoff' => 'delivering', 'reactivatedBy' => 'subscription-registration'],
+                modifiedBy: $modifiedBy,
+            );
+        }
+
+        if ([] !== $plans) {
+            $this->entityManager->flush();
+        }
+
+        return NotificationService::dispatchPlanSummary($plans);
     }
 
     /**

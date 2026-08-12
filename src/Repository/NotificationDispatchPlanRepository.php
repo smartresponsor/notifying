@@ -8,6 +8,7 @@ use App\Notifying\Entity\NotificationDispatchPlanEntity;
 use App\Notifying\Entity\NotificationRecipientEntity;
 use App\Notifying\Enum\NotificationChannel;
 use App\Notifying\Enum\NotificationDispatchStatus;
+use App\Notifying\Enum\RecipientType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -71,6 +72,32 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
             ->andWhere('dispatchPlan.id IN (:ids)')
             ->setParameter('ids', $ids)
             ->orderBy('dispatchPlan.objectAudit.objectCreatedAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return list<NotificationDispatchPlanEntity>
+     */
+    public function listSuppressedPushForRecipient(RecipientType $recipientType, string $recipientKey, int $limit = 100): array
+    {
+        if ('' === $recipientKey) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('dispatchPlan')
+            ->andWhere('dispatchPlan.recipientType = :recipientType')
+            ->andWhere('dispatchPlan.recipientKey = :recipientKey')
+            ->andWhere('dispatchPlan.channel = :channel')
+            ->andWhere('dispatchPlan.status = :status')
+            ->andWhere('dispatchPlan.reason = :reason')
+            ->setParameter('recipientType', $recipientType)
+            ->setParameter('recipientKey', $recipientKey)
+            ->setParameter('channel', NotificationChannel::Push)
+            ->setParameter('status', NotificationDispatchStatus::Suppressed)
+            ->setParameter('reason', 'no-active-push-subscription')
+            ->orderBy('dispatchPlan.scheduledAt', 'ASC')
+            ->setMaxResults(max(1, min(500, $limit)))
             ->getQuery()
             ->getResult();
     }

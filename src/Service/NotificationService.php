@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifying\Service;
 
 use App\Notifying\Entity\NotificationEntity;
+use App\Notifying\Entity\NotificationDispatchPlanEntity;
 use App\Notifying\Entity\NotificationRecipientEntity;
 use App\Notifying\Enum\NotificationPriority;
 use App\Notifying\Enum\RecipientType;
@@ -19,6 +20,7 @@ final class NotificationService
         private readonly EntityManagerInterface $entityManager,
         private readonly NotificationRepository $notificationRepository,
         private readonly NotificationRecipientRepository $recipientRepository,
+        private readonly NotificationDispatchPlannerService $dispatchPlanner,
     ) {
     }
 
@@ -113,6 +115,8 @@ final class NotificationService
             $recipientCreated = true;
         }
 
+        $dispatchPlans = $this->dispatchPlanner->planForRecipient($recipient, $createdBy);
+
         $this->entityManager->flush();
 
         return [
@@ -123,7 +127,27 @@ final class NotificationService
             'status' => $recipient->status()->value,
             'created' => null === $existing,
             'recipientCreated' => $recipientCreated,
+            'dispatchPlans' => self::dispatchPlanSummary($dispatchPlans),
         ];
+    }
+
+    /**
+     * @param list<NotificationDispatchPlanEntity> $plans
+     * @return list<array<string, mixed>>
+     */
+    public static function dispatchPlanSummary(array $plans): array
+    {
+        return array_map(
+            static fn (NotificationDispatchPlanEntity $plan): array => [
+                'id' => $plan->id(),
+                'channel' => $plan->channel()->value,
+                'status' => $plan->status()->value,
+                'reason' => $plan->reason(),
+                'target' => $plan->target(),
+                'scheduledAt' => $plan->scheduledAt()?->format(DATE_ATOM),
+            ],
+            $plans,
+        );
     }
 
     private static function newUuid(): string

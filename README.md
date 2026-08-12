@@ -76,12 +76,13 @@ Mobiling consumes Notifying APIs for inbox, unread-count, mark-read, ack, prefer
 | `POST` | `/api/notification/ack` | Acknowledge a notification |
 | `POST` | `/api/notification/subscription` | Register/update a device push subscription |
 | `POST` | `/api/notification/pref` | Upsert recipient notification preferences |
+| `GET` | `/api/notification/dispatch-plan` | Inspect planned or suppressed notification dispatch handoffs |
 
 ## Dispatch planning model
 
-Notifying prepares a `NotificationDeliveryPlan` value object. The plan is the boundary object that a future Delivering integration can consume.
+Notifying persists `NotificationDispatchPlanEntity` records for each notification recipient and channel decision. The dispatch plan is the durable boundary that Delivering can later consume.
 
-The current repository only defines the plan shape and planning service. It does not call Symfony Notifier and does not send through providers.
+The current repository creates inbox and push dispatch plans during intent ingestion. It does not call Symfony Notifier and does not send through providers.
 
 ## Repository layout
 

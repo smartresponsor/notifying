@@ -5,6 +5,7 @@ cruding:
   entity_class_alias_map:
     notification: 'App\Notifying\Entity\NotificationEntity'
     notification-recipient: 'App\Notifying\Entity\NotificationRecipientEntity'
+    notification-dispatch-plan: 'App\Notifying\Entity\NotificationDispatchPlanEntity'
     notification-preference: 'App\Notifying\Entity\NotificationPreferenceEntity'
     notification-subscription: 'App\Notifying\Entity\NotificationSubscriptionEntity'
   form_type_map: []

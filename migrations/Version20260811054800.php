@@ -62,6 +62,37 @@ final class Version20260811054800 extends AbstractMigration
         $recipient->addIndex(['snoozed_until'], 'idx_notifying_recipient_snoozed');
         $recipient->addForeignKeyConstraint('notifying_notification', ['notification_id'], ['id'], ['onDelete' => 'CASCADE'], 'fk_notifying_recipient_notification');
 
+        $dispatchPlan = $schema->createTable('notifying_notification_dispatch_plan');
+        $dispatchPlan->addColumn('id', 'guid');
+        $dispatchPlan->addColumn('notification_id', 'guid');
+        $dispatchPlan->addColumn('recipient_entry_id', 'guid');
+        $dispatchPlan->addColumn('recipient_type', 'string', ['length' => 255]);
+        $dispatchPlan->addColumn('recipient_key', 'string', ['length' => 160]);
+        $dispatchPlan->addColumn('channel', 'string', ['length' => 255]);
+        $dispatchPlan->addColumn('status', 'string', ['length' => 255]);
+        $dispatchPlan->addColumn('reason', 'string', ['length' => 255, 'notnull' => false]);
+        $dispatchPlan->addColumn('target', 'string', ['length' => 500, 'notnull' => false]);
+        $dispatchPlan->addColumn('scheduled_at', 'datetime_immutable', ['notnull' => false]);
+        $dispatchPlan->addColumn('handed_off_at', 'datetime_immutable', ['notnull' => false]);
+        $dispatchPlan->addColumn('failed_at', 'datetime_immutable', ['notnull' => false]);
+        $dispatchPlan->addColumn('cancelled_at', 'datetime_immutable', ['notnull' => false]);
+        $dispatchPlan->addColumn('payload', 'json');
+        $dispatchPlan->addColumn('metadata', 'json');
+        $this->addIdentityColumns($dispatchPlan);
+        $this->addAuditColumns($dispatchPlan);
+        $this->addTitleColumns($dispatchPlan);
+        $dispatchPlan->setPrimaryKey(['id']);
+        $dispatchPlan->addUniqueIndex(['object_uuid'], 'UNIQ_ED2327F94C6A6CB5');
+        $dispatchPlan->addUniqueIndex(['object_slug'], 'UNIQ_ED2327F9588A771');
+        $dispatchPlan->addUniqueIndex(['recipient_entry_id', 'channel'], 'uniq_notifying_dispatch_recipient_channel');
+        $dispatchPlan->addIndex(['recipient_key', 'status', 'object_created_at'], 'idx_notifying_dispatch_recipient_status');
+        $dispatchPlan->addIndex(['notification_id'], 'idx_notifying_dispatch_notification');
+        $dispatchPlan->addIndex(['recipient_entry_id'], 'idx_notifying_dispatch_recipient_entry');
+        $dispatchPlan->addIndex(['channel', 'status'], 'idx_notifying_dispatch_channel_status');
+        $dispatchPlan->addIndex(['scheduled_at'], 'idx_notifying_dispatch_scheduled');
+        $dispatchPlan->addForeignKeyConstraint('notifying_notification', ['notification_id'], ['id'], ['onDelete' => 'CASCADE'], 'fk_notifying_dispatch_notification');
+        $dispatchPlan->addForeignKeyConstraint('notifying_notification_recipient', ['recipient_entry_id'], ['id'], ['onDelete' => 'CASCADE'], 'fk_notifying_dispatch_recipient_entry');
+
         $preference = $schema->createTable('notifying_notification_preference');
         $preference->addColumn('id', 'guid');
         $preference->addColumn('recipient_type', 'string', ['length' => 255]);
@@ -113,7 +144,7 @@ final class Version20260811054800 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        foreach (['notifying_notification_subscription', 'notifying_notification_preference', 'notifying_notification_recipient', 'notifying_notification'] as $tableName) {
+        foreach (['notifying_notification_subscription', 'notifying_notification_preference', 'notifying_notification_dispatch_plan', 'notifying_notification_recipient', 'notifying_notification'] as $tableName) {
             if ($schema->hasTable($tableName)) {
                 $schema->dropTable($tableName);
             }

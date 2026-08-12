@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifying\Controller\Admin;
 
 use App\Notifying\Entity\NotificationEntity;
+use App\Notifying\Entity\NotificationDispatchPlanEntity;
 use App\Notifying\Entity\NotificationPreferenceEntity;
 use App\Notifying\Entity\NotificationRecipientEntity;
 use App\Notifying\Entity\NotificationSubscriptionEntity;
@@ -33,6 +34,7 @@ final class NotifyingDashboardController extends AbstractDashboardController
         yield MenuItem::section('Notification center');
         yield MenuItem::linkToCrud('Notifications', 'fa fa-bell', NotificationEntity::class);
         yield MenuItem::linkToCrud('Recipients', 'fa fa-users', NotificationRecipientEntity::class);
+        yield MenuItem::linkToCrud('Dispatch Plans', 'fa fa-route', NotificationDispatchPlanEntity::class);
         yield MenuItem::linkToCrud('Preferences', 'fa fa-sliders', NotificationPreferenceEntity::class);
         yield MenuItem::linkToCrud('Subscriptions', 'fa fa-mobile-screen', NotificationSubscriptionEntity::class);
     }

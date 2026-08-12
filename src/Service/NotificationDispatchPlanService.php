@@ -7,6 +7,7 @@ namespace App\Notifying\Service;
 use App\Notifying\Enum\RecipientType;
 use App\Notifying\Repository\NotificationDispatchPlanRepository;
 use App\Notifying\Repository\NotificationRecipientRepository;
+use App\Notifying\Repository\NotificationSubscriptionRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class NotificationDispatchPlanService
@@ -14,6 +15,7 @@ final class NotificationDispatchPlanService
     public function __construct(
         private readonly NotificationDispatchPlanRepository $dispatchPlanRepository,
         private readonly NotificationRecipientRepository $recipientRepository,
+        private readonly NotificationSubscriptionRepository $subscriptionRepository,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -49,6 +51,36 @@ final class NotificationDispatchPlanService
             $plan->markHandoffReady(
                 target: 'subscription:'.$tokenHash,
                 metadata: ['handoff' => 'delivering', 'reactivatedBy' => 'subscription-registration'],
+                modifiedBy: $modifiedBy,
+            );
+        }
+
+        if ([] !== $plans) {
+            $this->entityManager->flush();
+        }
+
+        return NotificationService::dispatchPlanSummary($plans);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function reactivatePushForPreference(RecipientType $recipientType, string $recipientKey, string $topic, ?string $modifiedBy = null): array
+    {
+        if ('' === $recipientKey || '' === $topic) {
+            return [];
+        }
+
+        $subscriptions = $this->subscriptionRepository->listActiveForRecipient($recipientType, $recipientKey);
+        if ([] === $subscriptions) {
+            return [];
+        }
+
+        $plans = $this->dispatchPlanRepository->listPolicySuppressedPushForRecipientTopic($recipientType, $recipientKey, $topic);
+        foreach ($plans as $plan) {
+            $plan->markHandoffReady(
+                target: 'subscription:'.$subscriptions[0]->tokenHash(),
+                metadata: ['handoff' => 'delivering', 'reactivatedBy' => 'preference-update'],
                 modifiedBy: $modifiedBy,
             );
         }

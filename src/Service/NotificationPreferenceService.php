@@ -14,6 +14,7 @@ final class NotificationPreferenceService
 {
     public function __construct(
         private readonly NotificationPreferenceRepository $preferenceRepository,
+        private readonly NotificationDispatchPlanService $dispatchPlanService,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -66,6 +67,16 @@ final class NotificationPreferenceService
 
         $this->entityManager->flush();
 
+        $reactivatedDispatchPlans = [];
+        if (self::pushAllowed($preference)) {
+            $reactivatedDispatchPlans = $this->dispatchPlanService->reactivatePushForPreference(
+                recipientType: $preference->recipientType(),
+                recipientKey: $preference->recipientKey(),
+                topic: $preference->topic(),
+                modifiedBy: $modifiedBy,
+            );
+        }
+
         return [
             'id' => $preference->getObjectUuid(),
             'recipientType' => $preference->recipientType()->value,
@@ -77,7 +88,23 @@ final class NotificationPreferenceService
             'mutedUntil' => $preference->mutedUntil()?->format(DATE_ATOM),
             'digestEnabled' => $preference->digestEnabled(),
             'created' => $created,
+            'reactivatedDispatchPlans' => $reactivatedDispatchPlans,
         ];
+    }
+
+    private static function pushAllowed(NotificationPreferenceEntity $preference): bool
+    {
+        $now = new \DateTimeImmutable();
+        if ($preference->muted() && (null === $preference->mutedUntil() || $preference->mutedUntil() > $now)) {
+            return false;
+        }
+
+        $enabledChannels = $preference->enabledChannels();
+        if ([] !== $enabledChannels && !in_array(NotificationChannel::Push->value, $enabledChannels, true)) {
+            return false;
+        }
+
+        return !in_array(NotificationChannel::Push->value, $preference->disabledChannels(), true);
     }
 
     /**

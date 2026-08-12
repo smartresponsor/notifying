@@ -68,11 +68,21 @@ final class NotificationPreferenceService
         $this->entityManager->flush();
 
         $reactivatedDispatchPlans = [];
-        if (self::pushAllowed($preference)) {
+        $suppressedDispatchPlans = [];
+        $pushSuppressionReason = self::pushSuppressionReason($preference);
+        if (null === $pushSuppressionReason) {
             $reactivatedDispatchPlans = $this->dispatchPlanService->reactivatePushForPreference(
                 recipientType: $preference->recipientType(),
                 recipientKey: $preference->recipientKey(),
                 topic: $preference->topic(),
+                modifiedBy: $modifiedBy,
+            );
+        } else {
+            $suppressedDispatchPlans = $this->dispatchPlanService->suppressPushForPreference(
+                recipientType: $preference->recipientType(),
+                recipientKey: $preference->recipientKey(),
+                topic: $preference->topic(),
+                reason: $pushSuppressionReason,
                 modifiedBy: $modifiedBy,
             );
         }
@@ -89,22 +99,27 @@ final class NotificationPreferenceService
             'digestEnabled' => $preference->digestEnabled(),
             'created' => $created,
             'reactivatedDispatchPlans' => $reactivatedDispatchPlans,
+            'suppressedDispatchPlans' => $suppressedDispatchPlans,
         ];
     }
 
-    private static function pushAllowed(NotificationPreferenceEntity $preference): bool
+    private static function pushSuppressionReason(NotificationPreferenceEntity $preference): ?string
     {
         $now = new \DateTimeImmutable();
         if ($preference->muted() && (null === $preference->mutedUntil() || $preference->mutedUntil() > $now)) {
-            return false;
+            return 'recipient-muted';
         }
 
         $enabledChannels = $preference->enabledChannels();
         if ([] !== $enabledChannels && !in_array(NotificationChannel::Push->value, $enabledChannels, true)) {
-            return false;
+            return 'channel-not-enabled';
         }
 
-        return !in_array(NotificationChannel::Push->value, $preference->disabledChannels(), true);
+        if (in_array(NotificationChannel::Push->value, $preference->disabledChannels(), true)) {
+            return 'channel-disabled';
+        }
+
+        return null;
     }
 
     /**

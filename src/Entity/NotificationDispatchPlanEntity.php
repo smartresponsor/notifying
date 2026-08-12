@@ -232,6 +232,22 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
     }
 
     /** @param array<string, mixed> $metadata */
+    public function suppress(string $reason, array $metadata = [], ?string $modifiedBy = null): void
+    {
+        $reason = trim($reason);
+        if ('' === $reason) {
+            throw new \InvalidArgumentException('Suppression reason is required.');
+        }
+
+        $this->assertTransitionAllowed([NotificationDispatchStatus::HandoffReady], NotificationDispatchStatus::Suppressed);
+        $this->status = NotificationDispatchStatus::Suppressed;
+        $this->reason = $reason;
+        $this->target = null;
+        $this->metadata = array_replace($this->metadata, $metadata);
+        $this->touchModified(modifiedBy: $modifiedBy);
+    }
+
+    /** @param array<string, mixed> $metadata */
     public function retargetHandoffReady(string $target, array $metadata = [], ?string $modifiedBy = null): void
     {
         if (NotificationDispatchStatus::HandoffReady !== $this->status) {

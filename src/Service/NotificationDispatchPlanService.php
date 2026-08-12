@@ -118,6 +118,31 @@ final class NotificationDispatchPlanService
     /**
      * @return list<array<string, mixed>>
      */
+    public function suppressPushForPreference(RecipientType $recipientType, string $recipientKey, string $topic, string $reason, ?string $modifiedBy = null): array
+    {
+        if ('' === $recipientKey || '' === $topic || '' === trim($reason)) {
+            return [];
+        }
+
+        $plans = $this->dispatchPlanRepository->listHandoffReadyPushForRecipientTopic($recipientType, $recipientKey, $topic);
+        foreach ($plans as $plan) {
+            $plan->suppress(
+                reason: $reason,
+                metadata: ['suppressedBy' => 'preference-update'],
+                modifiedBy: $modifiedBy,
+            );
+        }
+
+        if ([] !== $plans) {
+            $this->entityManager->flush();
+        }
+
+        return NotificationService::dispatchPlanSummary($plans);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
     public function reactivatePushForPreference(RecipientType $recipientType, string $recipientKey, string $topic, ?string $modifiedBy = null): array
     {
         if ('' === $recipientKey || '' === $topic) {

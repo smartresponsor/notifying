@@ -169,6 +169,33 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
     /**
      * @return list<NotificationDispatchPlanEntity>
      */
+    public function listHandoffReadyPushForRecipientTopic(RecipientType $recipientType, string $recipientKey, string $topic, int $limit = 100): array
+    {
+        if ('' === $recipientKey || '' === $topic) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('dispatchPlan')
+            ->innerJoin('dispatchPlan.notification', 'notification')
+            ->andWhere('dispatchPlan.recipientType = :recipientType')
+            ->andWhere('dispatchPlan.recipientKey = :recipientKey')
+            ->andWhere('notification.topic = :topic')
+            ->andWhere('dispatchPlan.channel = :channel')
+            ->andWhere('dispatchPlan.status = :status')
+            ->setParameter('recipientType', $recipientType)
+            ->setParameter('recipientKey', $recipientKey)
+            ->setParameter('topic', $topic)
+            ->setParameter('channel', NotificationChannel::Push)
+            ->setParameter('status', NotificationDispatchStatus::HandoffReady)
+            ->orderBy('dispatchPlan.scheduledAt', 'ASC')
+            ->setMaxResults(max(1, min(500, $limit)))
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return list<NotificationDispatchPlanEntity>
+     */
     public function listPolicySuppressedPushForRecipientTopic(RecipientType $recipientType, string $recipientKey, string $topic, int $limit = 100): array
     {
         if ('' === $recipientKey || '' === $topic) {

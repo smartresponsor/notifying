@@ -40,6 +40,30 @@ final class NotificationDispatchPlanService
     /**
      * @return list<array<string, mixed>>
      */
+    public function claim(string $claimedBy, int $limit = 100, int $leaseSeconds = 60): array
+    {
+        $claimedBy = trim($claimedBy);
+        if ('' === $claimedBy) {
+            throw new \InvalidArgumentException('claimedBy is required.');
+        }
+
+        $leaseSeconds = max(10, min(3600, $leaseSeconds));
+        $claimedAt = new \DateTimeImmutable();
+        $claimExpiresAt = $claimedAt->modify(sprintf('+%d seconds', $leaseSeconds));
+
+        return NotificationService::dispatchPlanSummary(
+            $this->dispatchPlanRepository->claimHandoffReady(
+                claimedBy: $claimedBy,
+                claimedAt: $claimedAt,
+                claimExpiresAt: $claimExpiresAt,
+                limit: $limit,
+            ),
+        );
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
     public function reactivatePushForSubscription(RecipientType $recipientType, string $recipientKey, string $tokenHash, ?string $modifiedBy = null): array
     {
         if ('' === $recipientKey || '' === $tokenHash) {
@@ -125,11 +149,16 @@ final class NotificationDispatchPlanService
      * @param list<string> $dispatchPlanIds
      * @return list<array<string, mixed>>
      */
-    public function markHandedOff(array $dispatchPlanIds, ?string $modifiedBy = null): array
+    public function markHandedOff(array $dispatchPlanIds, string $claimedBy, ?string $modifiedBy = null): array
     {
+        $claimedBy = trim($claimedBy);
+        if ('' === $claimedBy) {
+            throw new \InvalidArgumentException('claimedBy is required.');
+        }
+
         $plans = $this->dispatchPlanRepository->findByIds($dispatchPlanIds);
         foreach ($plans as $plan) {
-            $plan->markHandedOff($modifiedBy);
+            $plan->markHandedOff($claimedBy, $modifiedBy);
         }
 
         if ([] !== $plans) {

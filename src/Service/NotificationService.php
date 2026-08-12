@@ -145,6 +145,9 @@ final class NotificationService
                 'reason' => $plan->reason(),
                 'target' => $plan->target(),
                 'scheduledAt' => $plan->scheduledAt()?->format(DATE_ATOM),
+                'claimedBy' => $plan->claimedBy(),
+                'claimedAt' => $plan->claimedAt()?->format(DATE_ATOM),
+                'claimExpiresAt' => $plan->claimExpiresAt()?->format(DATE_ATOM),
             ],
             $plans,
         );

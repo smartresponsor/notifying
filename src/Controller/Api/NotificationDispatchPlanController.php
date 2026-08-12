@@ -30,13 +30,45 @@ final class NotificationDispatchPlanController extends AbstractController
         ]);
     }
 
+    #[Route('/api/notification/dispatch-plan/claim', name: 'notifying_api_notification_dispatch_plan_claim', methods: ['POST'])]
+    public function claim(Request $request): JsonResponse
+    {
+        $payload = $request->toArray();
+
+        try {
+            $items = $this->dispatchPlanService->claim(
+                claimedBy: (string) ($payload['claimedBy'] ?? ''),
+                limit: (int) ($payload['limit'] ?? 100),
+                leaseSeconds: (int) ($payload['leaseSeconds'] ?? 60),
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json([
+                'ok' => false,
+                'error' => $exception->getMessage(),
+            ], 400);
+        }
+
+        return $this->json([
+            'ok' => true,
+            'items' => $items,
+        ]);
+    }
+
     #[Route('/api/notification/dispatch-plan/handoff', name: 'notifying_api_notification_dispatch_plan_handoff', methods: ['POST'])]
     public function handoff(Request $request): JsonResponse
     {
         $payload = $request->toArray();
 
         try {
-            $items = $this->dispatchPlanService->markHandedOff(NotificationDispatchPlanService::idsFromPayload($payload));
+            $items = $this->dispatchPlanService->markHandedOff(
+                NotificationDispatchPlanService::idsFromPayload($payload),
+                (string) ($payload['claimedBy'] ?? ''),
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json([
+                'ok' => false,
+                'error' => $exception->getMessage(),
+            ], 400);
         } catch (\DomainException $exception) {
             return $this->transitionConflict($exception);
         }

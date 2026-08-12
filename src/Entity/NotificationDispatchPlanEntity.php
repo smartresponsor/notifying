@@ -24,6 +24,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_notifying_dispatch_notification', columns: ['notification_id'])]
 #[ORM\Index(name: 'idx_notifying_dispatch_recipient_entry', columns: ['recipient_entry_id'])]
 #[ORM\Index(name: 'idx_notifying_dispatch_channel_status', columns: ['channel', 'status'])]
+#[ORM\Index(name: 'idx_notifying_dispatch_claim', columns: ['status', 'claim_expires_at'])]
 #[ORM\Index(name: 'idx_notifying_dispatch_scheduled', columns: ['scheduled_at'])]
 class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, ObjectAuditedInterface, ObjectTitledInterface
 {
@@ -63,6 +64,15 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $scheduledAt = null;
+
+    #[ORM\Column(length: 190, nullable: true)]
+    private ?string $claimedBy = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $claimedAt = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $claimExpiresAt = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $handedOffAt = null;
@@ -165,6 +175,21 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
         return $this->scheduledAt;
     }
 
+    public function claimedBy(): ?string
+    {
+        return $this->claimedBy;
+    }
+
+    public function claimedAt(): ?\DateTimeImmutable
+    {
+        return $this->claimedAt;
+    }
+
+    public function claimExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->claimExpiresAt;
+    }
+
     public function handedOffAt(): ?\DateTimeImmutable
     {
         return $this->handedOffAt;
@@ -222,15 +247,60 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 
-    public function markHandedOff(?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
+    public function claim(string $claimedBy, \DateTimeImmutable $expiresAt, ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
+    {
+        if ('' === trim($claimedBy)) {
+            throw new \InvalidArgumentException('claimedBy is required.');
+        }
+
+        $this->assertTransitionAllowed([NotificationDispatchStatus::HandoffReady], NotificationDispatchStatus::Claimed);
+        $claimedAt = $at ?? new \DateTimeImmutable();
+        if ($expiresAt <= $claimedAt) {
+            throw new \InvalidArgumentException('Claim expiry must be in the future.');
+        }
+
+        $this->status = NotificationDispatchStatus::Claimed;
+        $this->claimedBy = $claimedBy;
+        $this->claimedAt = $claimedAt;
+        $this->claimExpiresAt = $expiresAt;
+        $this->touchModified(modifiedBy: $modifiedBy);
+    }
+
+    public function releaseExpiredClaim(?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
+    {
+        if (NotificationDispatchStatus::Claimed !== $this->status) {
+            throw new \DomainException(sprintf('Dispatch plan %s is not claimed.', $this->id));
+        }
+
+        $at ??= new \DateTimeImmutable();
+        if (null === $this->claimExpiresAt || $this->claimExpiresAt > $at) {
+            throw new \DomainException(sprintf('Dispatch plan %s claim has not expired.', $this->id));
+        }
+
+        $this->status = NotificationDispatchStatus::HandoffReady;
+        $this->claimedBy = null;
+        $this->claimedAt = null;
+        $this->claimExpiresAt = null;
+        $this->touchModified(modifiedBy: $modifiedBy);
+    }
+
+    public function markHandedOff(string $claimedBy, ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
     {
         if (NotificationDispatchStatus::HandedOff === $this->status) {
             return;
         }
 
-        $this->assertTransitionAllowed([NotificationDispatchStatus::HandoffReady], NotificationDispatchStatus::HandedOff);
+        $this->assertTransitionAllowed([NotificationDispatchStatus::Claimed], NotificationDispatchStatus::HandedOff);
+        $at ??= new \DateTimeImmutable();
+        if ($this->claimedBy !== $claimedBy) {
+            throw new \DomainException(sprintf('Dispatch plan %s is claimed by another worker.', $this->id));
+        }
+        if (null === $this->claimExpiresAt || $this->claimExpiresAt <= $at) {
+            throw new \DomainException(sprintf('Dispatch plan %s claim has expired.', $this->id));
+        }
+
         $this->status = NotificationDispatchStatus::HandedOff;
-        $this->handedOffAt = $at ?? new \DateTimeImmutable();
+        $this->handedOffAt = $at;
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 
@@ -241,7 +311,7 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
         }
 
         $this->assertTransitionAllowed(
-            [NotificationDispatchStatus::HandoffReady, NotificationDispatchStatus::HandedOff],
+            [NotificationDispatchStatus::HandoffReady, NotificationDispatchStatus::Claimed, NotificationDispatchStatus::HandedOff],
             NotificationDispatchStatus::Failed,
         );
         $this->status = NotificationDispatchStatus::Failed;

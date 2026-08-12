@@ -77,7 +77,8 @@ Mobiling consumes Notifying APIs for inbox, unread-count, mark-read, ack, prefer
 | `POST` | `/api/notification/subscription` | Register, update, or disable a device push subscription |
 | `POST` | `/api/notification/pref` | Upsert recipient notification preferences |
 | `GET` | `/api/notification/dispatch-plan` | Inspect planned or suppressed notification dispatch handoffs |
-| `POST` | `/api/notification/dispatch-plan/handoff` | Mark dispatch plans as handed off to Delivering |
+| `POST` | `/api/notification/dispatch-plan/claim` | Atomically lease handoff-ready plans to one Delivering worker |
+| `POST` | `/api/notification/dispatch-plan/handoff` | Mark claimed dispatch plans as handed off to Delivering |
 | `POST` | `/api/notification/dispatch-plan/fail` | Mark dispatch plans as failed without retrying provider sends |
 | `POST` | `/api/notification/dispatch-plan/cancel` | Cancel dispatch plans before physical delivery |
 
@@ -93,7 +94,9 @@ Subscription registration is device-first for a recipient/app/platform/device id
 
 When a recipient preference is updated to allow push again, Notifying also reactivates topic-matching push plans that were suppressed by notification policy (`recipient-muted`, `channel-not-enabled`, or `channel-disabled`). Reactivation requires a currently active push subscription and does not bypass subscription expiry or disable state.
 
-Dispatch lifecycle transitions are guarded in the entity. `handoff_ready` may become `handed_off`; `handoff_ready` or `handed_off` may become `failed`; `planned`, `suppressed`, or `handoff_ready` may become `cancelled`. Repeating an already completed terminal transition is idempotent, while invalid transitions return HTTP `409 Conflict`.
+Delivering must claim work before handoff. Claim acquisition uses an atomic conditional database update from `handoff_ready` to `claimed`, so concurrent workers cannot successfully claim the same row. The entity-backed lease records `claimedBy`, `claimedAt`, and `claimExpiresAt`; expired claims are recovered back to `handoff_ready` before the next claim scan, and only the worker identified by `claimedBy` may complete handoff while its lease is valid.
+
+Dispatch lifecycle transitions are guarded in the entity. `handoff_ready` becomes `claimed`, then `claimed` may become `handed_off`; `handoff_ready`, `claimed`, or `handed_off` may become `failed`; `planned`, `suppressed`, or `handoff_ready` may become `cancelled`. Repeating an already completed terminal transition is idempotent, while invalid transitions return HTTP `409 Conflict`.
 
 ## Repository layout
 

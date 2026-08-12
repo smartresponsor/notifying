@@ -65,6 +65,35 @@ final class NotificationDispatchPlanService
     /**
      * @return list<array<string, mixed>>
      */
+    public function retargetPushForSubscription(RecipientType $recipientType, string $recipientKey, string $oldTokenHash, string $newTokenHash, ?string $modifiedBy = null): array
+    {
+        if ('' === $recipientKey || '' === $oldTokenHash || '' === $newTokenHash || $oldTokenHash === $newTokenHash) {
+            return [];
+        }
+
+        $plans = $this->dispatchPlanRepository->listHandoffReadyPushForRecipientTarget(
+            $recipientType,
+            $recipientKey,
+            'subscription:'.$oldTokenHash,
+        );
+        foreach ($plans as $plan) {
+            $plan->retargetHandoffReady(
+                target: 'subscription:'.$newTokenHash,
+                metadata: ['handoff' => 'delivering', 'retargetedBy' => 'subscription-token-rotation'],
+                modifiedBy: $modifiedBy,
+            );
+        }
+
+        if ([] !== $plans) {
+            $this->entityManager->flush();
+        }
+
+        return NotificationService::dispatchPlanSummary($plans);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
     public function reactivatePushForPreference(RecipientType $recipientType, string $recipientKey, string $topic, ?string $modifiedBy = null): array
     {
         if ('' === $recipientKey || '' === $topic) {

@@ -206,6 +206,22 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 
+    /** @param array<string, mixed> $metadata */
+    public function retargetHandoffReady(string $target, array $metadata = [], ?string $modifiedBy = null): void
+    {
+        if (NotificationDispatchStatus::HandoffReady !== $this->status) {
+            throw new \DomainException(sprintf(
+                'Dispatch plan %s cannot be retargeted while in %s status.',
+                $this->id,
+                $this->status->value,
+            ));
+        }
+
+        $this->target = $target;
+        $this->metadata = array_replace($this->metadata, $metadata);
+        $this->touchModified(modifiedBy: $modifiedBy);
+    }
+
     public function markHandedOff(?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
     {
         if (NotificationDispatchStatus::HandedOff === $this->status) {

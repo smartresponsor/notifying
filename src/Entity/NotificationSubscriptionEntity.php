@@ -18,8 +18,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: NotificationSubscriptionRepository::class)]
 #[ORM\Table(name: 'notifying_notification_subscription')]
 #[ORM\UniqueConstraint(name: 'uniq_notifying_subscription_token_hash', columns: ['token_hash'])]
+#[ORM\UniqueConstraint(name: 'uniq_notifying_subscription_device', columns: ['recipient_type', 'recipient_key', 'app_key', 'platform', 'device_id'])]
 #[ORM\Index(name: 'idx_notifying_subscription_recipient', columns: ['recipient_key', 'enabled'])]
-#[ORM\Index(name: 'idx_notifying_subscription_device', columns: ['app_key', 'platform', 'device_id'])]
 class NotificationSubscriptionEntity implements ObjectIdentifiedInterface, ObjectAuditedInterface, ObjectTitledInterface
 {
     use ObjectIdentityEmbeddableTrait;

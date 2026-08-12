@@ -46,8 +46,21 @@ final class NotificationSubscriptionService
         }
 
         $tokenHash = hash('sha256', $token);
-        $subscription = $this->subscriptionRepository->findByTokenHash($tokenHash);
+        $deviceSubscription = $this->subscriptionRepository->findForDevice($recipientType, $recipientKey, $appKey, $platform, $deviceId);
+        $tokenSubscription = $this->subscriptionRepository->findByTokenHash($tokenHash);
+
+        if ($tokenSubscription instanceof NotificationSubscriptionEntity
+            && $deviceSubscription instanceof NotificationSubscriptionEntity
+            && $tokenSubscription !== $deviceSubscription) {
+            throw new \InvalidArgumentException('Push token is already registered to another subscription identity.');
+        }
+        if ($tokenSubscription instanceof NotificationSubscriptionEntity && !$deviceSubscription instanceof NotificationSubscriptionEntity) {
+            throw new \InvalidArgumentException('Push token is already registered to another subscription identity.');
+        }
+
+        $subscription = $deviceSubscription ?? $tokenSubscription;
         $created = false;
+        $previousTokenHash = null;
 
         if (!$subscription instanceof NotificationSubscriptionEntity) {
             $subscription = new NotificationSubscriptionEntity(
@@ -64,6 +77,7 @@ final class NotificationSubscriptionService
             $this->entityManager->persist($subscription);
             $created = true;
         } else {
+            $previousTokenHash = $subscription->tokenHash();
             $subscription->rotateToken($token, $modifiedBy);
             $subscription->touchSeen($modifiedBy);
         }
@@ -74,6 +88,13 @@ final class NotificationSubscriptionService
 
         $this->entityManager->flush();
 
+        $retargetedDispatchPlans = null === $previousTokenHash ? [] : $this->dispatchPlanService->retargetPushForSubscription(
+            recipientType: $subscription->recipientType(),
+            recipientKey: $subscription->recipientKey(),
+            oldTokenHash: $previousTokenHash,
+            newTokenHash: $subscription->tokenHash(),
+            modifiedBy: $modifiedBy,
+        );
         $reactivatedDispatchPlans = $this->dispatchPlanService->reactivatePushForSubscription(
             recipientType: $subscription->recipientType(),
             recipientKey: $subscription->recipientKey(),
@@ -83,6 +104,7 @@ final class NotificationSubscriptionService
 
         return self::subscriptionSummary($subscription) + [
             'created' => $created,
+            'retargetedDispatchPlans' => $retargetedDispatchPlans,
             'reactivatedDispatchPlans' => $reactivatedDispatchPlans,
         ];
     }

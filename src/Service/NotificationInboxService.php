@@ -43,10 +43,13 @@ final class NotificationInboxService
     /**
      * @param list<string> $recipientEntryIds
      */
-    public function markRead(array $recipientEntryIds, ?string $modifiedBy = null): int
+    public function markRead(array $recipientEntryIds, string $recipientKey, ?string $modifiedBy = null): int
     {
         $updated = 0;
         foreach ($this->recipientRepository->findByIds($recipientEntryIds) as $entry) {
+            if ($entry->recipientKey() !== $recipientKey) {
+                continue;
+            }
             if (!$entry->isUnread()) {
                 continue;
             }
@@ -61,14 +64,14 @@ final class NotificationInboxService
         return $updated;
     }
 
-    public function ack(string $recipientEntryId, ?string $modifiedBy = null): bool
+    public function ack(string $recipientEntryId, string $recipientKey, ?string $modifiedBy = null): bool
     {
         if ('' === $recipientEntryId) {
             return false;
         }
 
         $entry = $this->recipientRepository->find($recipientEntryId);
-        if (!$entry instanceof NotificationRecipientEntity) {
+        if (!$entry instanceof NotificationRecipientEntity || $entry->recipientKey() !== $recipientKey) {
             return false;
         }
 
@@ -78,14 +81,14 @@ final class NotificationInboxService
         return true;
     }
 
-    public function archive(string $recipientEntryId, ?string $modifiedBy = null): bool
+    public function archive(string $recipientEntryId, string $recipientKey, ?string $modifiedBy = null): bool
     {
         if ('' === $recipientEntryId) {
             return false;
         }
 
         $entry = $this->recipientRepository->find($recipientEntryId);
-        if (!$entry instanceof NotificationRecipientEntity) {
+        if (!$entry instanceof NotificationRecipientEntity || $entry->recipientKey() !== $recipientKey) {
             return false;
         }
 
@@ -95,14 +98,14 @@ final class NotificationInboxService
         return true;
     }
 
-    public function snooze(string $recipientEntryId, \DateTimeImmutable $until, ?string $modifiedBy = null): bool
+    public function snooze(string $recipientEntryId, string $recipientKey, \DateTimeImmutable $until, ?string $modifiedBy = null): bool
     {
         if ('' === $recipientEntryId) {
             return false;
         }
 
         $entry = $this->recipientRepository->find($recipientEntryId);
-        if (!$entry instanceof NotificationRecipientEntity) {
+        if (!$entry instanceof NotificationRecipientEntity || $entry->recipientKey() !== $recipientKey) {
             return false;
         }
 

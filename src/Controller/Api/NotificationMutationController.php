@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifying\Controller\Api;
 
 use App\Notifying\Service\NotificationInboxService;
+use App\Notifying\Service\NotificationRecipientAccessService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,6 +15,7 @@ final class NotificationMutationController extends AbstractController
 {
     public function __construct(
         private readonly NotificationInboxService $inboxService,
+        private readonly NotificationRecipientAccessService $recipientAccess,
     ) {
     }
 
@@ -23,7 +25,8 @@ final class NotificationMutationController extends AbstractController
         $payload = $request->toArray();
         $entryIds = array_values(array_filter(array_map('strval', $payload['recipientEntryIds'] ?? $payload['notificationIds'] ?? [])));
 
-        $updated = $this->inboxService->markRead($entryIds);
+        $recipientKey = $this->recipientAccess->requireRecipientKey($request);
+        $updated = $this->inboxService->markRead($entryIds, $recipientKey);
 
         return $this->json([
             'ok' => true,
@@ -37,9 +40,11 @@ final class NotificationMutationController extends AbstractController
         $payload = $request->toArray();
         $entryId = (string) ($payload['recipientEntryId'] ?? $payload['notificationId'] ?? '');
 
+        $recipientKey = $this->recipientAccess->requireRecipientKey($request);
+
         return $this->json([
             'ok' => true,
-            'acked' => $this->inboxService->ack($entryId),
+            'acked' => $this->inboxService->ack($entryId, $recipientKey),
         ]);
     }
 
@@ -49,9 +54,11 @@ final class NotificationMutationController extends AbstractController
         $payload = $request->toArray();
         $entryId = (string) ($payload['recipientEntryId'] ?? '');
 
+        $recipientKey = $this->recipientAccess->requireRecipientKey($request);
+
         return $this->json([
             'ok' => true,
-            'archived' => $this->inboxService->archive($entryId),
+            'archived' => $this->inboxService->archive($entryId, $recipientKey),
         ]);
     }
 
@@ -62,9 +69,11 @@ final class NotificationMutationController extends AbstractController
         $entryId = (string) ($payload['recipientEntryId'] ?? '');
         $until = new \DateTimeImmutable((string) ($payload['until'] ?? '+1 hour'));
 
+        $recipientKey = $this->recipientAccess->requireRecipientKey($request);
+
         return $this->json([
             'ok' => true,
-            'snoozed' => $this->inboxService->snooze($entryId, $until),
+            'snoozed' => $this->inboxService->snooze($entryId, $recipientKey, $until),
         ]);
     }
 }

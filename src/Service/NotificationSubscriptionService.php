@@ -113,7 +113,7 @@ final class NotificationSubscriptionService
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */
-    public function disableSubscription(array $payload, ?string $modifiedBy = null): array
+    public function disableSubscription(array $payload, ?string $modifiedBy = null, ?string $expectedRecipientKey = null): array
     {
         $subscription = $this->resolveSubscription($payload);
         if (!$subscription instanceof NotificationSubscriptionEntity) {
@@ -121,6 +121,9 @@ final class NotificationSubscriptionService
                 'disabled' => false,
                 'subscription' => null,
             ];
+        }
+        if (null !== $expectedRecipientKey && '' !== $expectedRecipientKey && $subscription->recipientKey() !== $expectedRecipientKey) {
+            throw new \DomainException('Notification subscription ownership mismatch.');
         }
 
         if ($subscription->enabled()) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifying\Controller\Api;
 
 use App\Notifying\Service\NotificationPreferenceService;
+use App\Notifying\Service\NotificationRecipientAccessService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,6 +15,7 @@ final class NotificationPreferenceController extends AbstractController
 {
     public function __construct(
         private readonly NotificationPreferenceService $preferenceService,
+        private readonly NotificationRecipientAccessService $recipientAccess,
     ) {
     }
 
@@ -21,7 +23,12 @@ final class NotificationPreferenceController extends AbstractController
     public function upsert(Request $request): JsonResponse
     {
         try {
-            $preference = $this->preferenceService->upsertPreference($request->toArray());
+            $payload = $request->toArray();
+            $payload['recipientKey'] = $this->recipientAccess->requireRecipientKey(
+                $request,
+                (string) ($payload['recipientKey'] ?? ''),
+            );
+            $preference = $this->preferenceService->upsertPreference($payload);
         } catch (\InvalidArgumentException $exception) {
             return $this->json([
                 'ok' => false,

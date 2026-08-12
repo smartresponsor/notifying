@@ -66,6 +66,8 @@ Delivering physically sends prepared payloads through provider transports and re
 
 Mobiling consumes Notifying APIs for inbox, unread-count, mark-read, ack, preferences, and push subscription registration.
 
+Recipient-facing APIs are ownership-scoped. The Host may provide a verified recipient through the `notifying_recipient_key` request attribute; otherwise Notifying uses the authenticated Symfony `UserInterface::getUserIdentifier()`. Standalone `dev`/`test` runtime additionally accepts `X-Notifying-Recipient-Key` for smoke/testing only. Caller-supplied `recipientKey` is treated only as an assertion and must match the verified identity; production does not trust it as authentication. Inbox mutations also verify that each recipient entry belongs to that identity, and subscription disable verifies token/device ownership before changing state.
+
 ## Initial API contract
 
 | Method | Path | Responsibility |

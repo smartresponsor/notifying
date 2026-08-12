@@ -16,6 +16,6 @@ final class NotificationIntentMessageHandler
 
     public function __invoke(NotificationIntentMessage $message): void
     {
-        $this->notificationService->createIntent($message->payload);
+        $this->notificationService->ingest($message->payload);
     }
 }

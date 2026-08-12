@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifying\Controller\Api;
 
-use App\Notifying\Repository\NotificationDispatchPlanRepository;
-use App\Notifying\Repository\NotificationRecipientRepository;
-use App\Notifying\Service\NotificationService;
+use App\Notifying\Service\NotificationDispatchPlanService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,8 +13,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class NotificationDispatchPlanController extends AbstractController
 {
     public function __construct(
-        private readonly NotificationDispatchPlanRepository $dispatchPlanRepository,
-        private readonly NotificationRecipientRepository $recipientRepository,
+        private readonly NotificationDispatchPlanService $dispatchPlanService,
     ) {
     }
 
@@ -24,22 +21,47 @@ final class NotificationDispatchPlanController extends AbstractController
     public function list(Request $request): JsonResponse
     {
         $recipientEntryId = (string) $request->query->get('recipientEntryId', '');
-        if ('' !== $recipientEntryId) {
-            $recipients = $this->recipientRepository->findByIds([$recipientEntryId]);
-            $plans = [] === $recipients ? [] : $this->dispatchPlanRepository->listForRecipientEntry($recipients[0]);
-
-            return $this->json([
-                'ok' => true,
-                'items' => NotificationService::dispatchPlanSummary($plans),
-            ]);
-        }
-
         $limit = (int) $request->query->get('limit', 100);
 
         return $this->json([
             'ok' => true,
-            'items' => NotificationService::dispatchPlanSummary($this->dispatchPlanRepository->listPending($limit)),
+            'items' => $this->dispatchPlanService->list('' === $recipientEntryId ? null : $recipientEntryId, $limit),
             'limit' => max(1, min(500, $limit)),
+        ]);
+    }
+
+    #[Route('/api/notification/dispatch-plan/handoff', name: 'notifying_api_notification_dispatch_plan_handoff', methods: ['POST'])]
+    public function handoff(Request $request): JsonResponse
+    {
+        $payload = $request->toArray();
+
+        return $this->json([
+            'ok' => true,
+            'items' => $this->dispatchPlanService->markHandedOff(NotificationDispatchPlanService::idsFromPayload($payload)),
+        ]);
+    }
+
+    #[Route('/api/notification/dispatch-plan/fail', name: 'notifying_api_notification_dispatch_plan_fail', methods: ['POST'])]
+    public function fail(Request $request): JsonResponse
+    {
+        $payload = $request->toArray();
+        $reason = (string) ($payload['reason'] ?? 'handoff-failed');
+
+        return $this->json([
+            'ok' => true,
+            'items' => $this->dispatchPlanService->markFailed(NotificationDispatchPlanService::idsFromPayload($payload), $reason),
+        ]);
+    }
+
+    #[Route('/api/notification/dispatch-plan/cancel', name: 'notifying_api_notification_dispatch_plan_cancel', methods: ['POST'])]
+    public function cancel(Request $request): JsonResponse
+    {
+        $payload = $request->toArray();
+        $reason = (string) ($payload['reason'] ?? 'cancelled');
+
+        return $this->json([
+            'ok' => true,
+            'items' => $this->dispatchPlanService->cancel(NotificationDispatchPlanService::idsFromPayload($payload), $reason),
         ]);
     }
 }

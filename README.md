@@ -77,6 +77,9 @@ Mobiling consumes Notifying APIs for inbox, unread-count, mark-read, ack, prefer
 | `POST` | `/api/notification/subscription` | Register/update a device push subscription |
 | `POST` | `/api/notification/pref` | Upsert recipient notification preferences |
 | `GET` | `/api/notification/dispatch-plan` | Inspect planned or suppressed notification dispatch handoffs |
+| `POST` | `/api/notification/dispatch-plan/handoff` | Mark dispatch plans as handed off to Delivering |
+| `POST` | `/api/notification/dispatch-plan/fail` | Mark dispatch plans as failed without retrying provider sends |
+| `POST` | `/api/notification/dispatch-plan/cancel` | Cancel dispatch plans before physical delivery |
 
 ## Dispatch planning model
 

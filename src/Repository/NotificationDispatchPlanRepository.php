@@ -56,4 +56,22 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * @param list<string> $ids
+     * @return list<NotificationDispatchPlanEntity>
+     */
+    public function findByIds(array $ids): array
+    {
+        if ([] === $ids) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('dispatchPlan')
+            ->andWhere('dispatchPlan.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->orderBy('dispatchPlan.objectAudit.objectCreatedAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

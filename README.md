@@ -74,7 +74,7 @@ Mobiling consumes Notifying APIs for inbox, unread-count, mark-read, ack, prefer
 | `GET` | `/api/notification/unread-count` | Return unread count for a recipient |
 | `POST` | `/api/notification/mark-read` | Mark one or more notifications as read |
 | `POST` | `/api/notification/ack` | Acknowledge a notification |
-| `POST` | `/api/notification/subscription` | Register/update a device push subscription |
+| `POST` | `/api/notification/subscription` | Register, update, or disable a device push subscription |
 | `POST` | `/api/notification/pref` | Upsert recipient notification preferences |
 | `GET` | `/api/notification/dispatch-plan` | Inspect planned or suppressed notification dispatch handoffs |
 | `POST` | `/api/notification/dispatch-plan/handoff` | Mark dispatch plans as handed off to Delivering |

@@ -81,6 +81,65 @@ final class NotificationSubscriptionService
             modifiedBy: $modifiedBy,
         );
 
+        return self::subscriptionSummary($subscription) + [
+            'created' => $created,
+            'reactivatedDispatchPlans' => $reactivatedDispatchPlans,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    public function disableSubscription(array $payload, ?string $modifiedBy = null): array
+    {
+        $subscription = $this->resolveSubscription($payload);
+        if (!$subscription instanceof NotificationSubscriptionEntity) {
+            return [
+                'disabled' => false,
+                'subscription' => null,
+            ];
+        }
+
+        if ($subscription->enabled()) {
+            $subscription->disable($modifiedBy);
+            $this->entityManager->flush();
+        }
+
+        return [
+            'disabled' => true,
+            'subscription' => self::subscriptionSummary($subscription),
+        ];
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function resolveSubscription(array $payload): ?NotificationSubscriptionEntity
+    {
+        $token = (string) ($payload['token'] ?? '');
+        $tokenHash = (string) ($payload['tokenHash'] ?? '');
+        if ('' !== $token) {
+            $tokenHash = hash('sha256', $token);
+        }
+        if ('' !== $tokenHash) {
+            return $this->subscriptionRepository->findByTokenHash($tokenHash);
+        }
+
+        $recipientType = RecipientType::tryFrom((string) ($payload['recipientType'] ?? 'user')) ?? RecipientType::User;
+        $recipientKey = (string) ($payload['recipientKey'] ?? '');
+        $platform = (string) ($payload['platform'] ?? '');
+        $appKey = (string) ($payload['appKey'] ?? 'default');
+        $deviceId = (string) ($payload['deviceId'] ?? '');
+
+        if ('' === trim($recipientKey) || '' === trim($platform) || '' === trim($deviceId)) {
+            return null;
+        }
+
+        return $this->subscriptionRepository->findForDevice($recipientType, $recipientKey, $appKey, $platform, $deviceId);
+    }
+
+    /** @return array<string, mixed> */
+    private static function subscriptionSummary(NotificationSubscriptionEntity $subscription): array
+    {
         return [
             'recipientType' => $subscription->recipientType()->value,
             'recipientKey' => $subscription->recipientKey(),
@@ -89,8 +148,9 @@ final class NotificationSubscriptionService
             'deviceId' => $subscription->deviceId(),
             'tokenHash' => $subscription->tokenHash(),
             'enabled' => $subscription->enabled(),
-            'created' => $created,
-            'reactivatedDispatchPlans' => $reactivatedDispatchPlans,
+            'lastSeenAt' => $subscription->lastSeenAt()?->format(DATE_ATOM),
+            'disabledAt' => $subscription->disabledAt()?->format(DATE_ATOM),
+            'expiresAt' => $subscription->expiresAt()?->format(DATE_ATOM),
         ];
     }
 

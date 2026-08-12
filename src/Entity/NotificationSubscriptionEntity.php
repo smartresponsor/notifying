@@ -129,6 +129,21 @@ class NotificationSubscriptionEntity implements ObjectIdentifiedInterface, Objec
         return $this->enabled;
     }
 
+    public function lastSeenAt(): ?\DateTimeImmutable
+    {
+        return $this->lastSeenAt;
+    }
+
+    public function disabledAt(): ?\DateTimeImmutable
+    {
+        return $this->disabledAt;
+    }
+
+    public function expiresAt(): ?\DateTimeImmutable
+    {
+        return $this->expiresAt;
+    }
+
     public function rotateToken(string $token, ?string $modifiedBy = null): void
     {
         $this->token = $token;

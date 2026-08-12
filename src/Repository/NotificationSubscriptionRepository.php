@@ -24,6 +24,17 @@ final class NotificationSubscriptionRepository extends ServiceEntityRepository
         return $this->findOneBy(['tokenHash' => $tokenHash]);
     }
 
+    public function findForDevice(RecipientType $recipientType, string $recipientKey, string $appKey, string $platform, string $deviceId): ?NotificationSubscriptionEntity
+    {
+        return $this->findOneBy([
+            'recipientType' => $recipientType,
+            'recipientKey' => $recipientKey,
+            'appKey' => $appKey,
+            'platform' => $platform,
+            'deviceId' => $deviceId,
+        ]);
+    }
+
     /**
      * @return list<NotificationSubscriptionEntity>
      */
@@ -33,8 +44,10 @@ final class NotificationSubscriptionRepository extends ServiceEntityRepository
             ->andWhere('subscription.recipientType = :recipientType')
             ->andWhere('subscription.recipientKey = :recipientKey')
             ->andWhere('subscription.enabled = true')
+            ->andWhere('subscription.expiresAt IS NULL OR subscription.expiresAt > :now')
             ->setParameter('recipientType', $recipientType)
             ->setParameter('recipientKey', $recipientKey)
+            ->setParameter('now', new \DateTimeImmutable())
             ->orderBy('subscription.lastSeenAt', 'DESC');
 
         if (null !== $appKey) {

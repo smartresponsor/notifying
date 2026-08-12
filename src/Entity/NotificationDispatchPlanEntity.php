@@ -195,6 +195,7 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
     /** @param array<string, mixed> $metadata */
     public function markHandoffReady(string $target, array $metadata = [], ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
     {
+        $this->assertTransitionAllowed([NotificationDispatchStatus::Suppressed], NotificationDispatchStatus::HandoffReady);
         $this->status = NotificationDispatchStatus::HandoffReady;
         $this->reason = 'push-handoff-ready';
         $this->target = $target;
@@ -207,6 +208,11 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
 
     public function markHandedOff(?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
     {
+        if (NotificationDispatchStatus::HandedOff === $this->status) {
+            return;
+        }
+
+        $this->assertTransitionAllowed([NotificationDispatchStatus::HandoffReady], NotificationDispatchStatus::HandedOff);
         $this->status = NotificationDispatchStatus::HandedOff;
         $this->handedOffAt = $at ?? new \DateTimeImmutable();
         $this->touchModified(modifiedBy: $modifiedBy);
@@ -214,6 +220,14 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
 
     public function markFailed(string $reason, ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
     {
+        if (NotificationDispatchStatus::Failed === $this->status) {
+            return;
+        }
+
+        $this->assertTransitionAllowed(
+            [NotificationDispatchStatus::HandoffReady, NotificationDispatchStatus::HandedOff],
+            NotificationDispatchStatus::Failed,
+        );
         $this->status = NotificationDispatchStatus::Failed;
         $this->reason = $reason;
         $this->failedAt = $at ?? new \DateTimeImmutable();
@@ -222,9 +236,32 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
 
     public function cancel(string $reason, ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
     {
+        if (NotificationDispatchStatus::Cancelled === $this->status) {
+            return;
+        }
+
+        $this->assertTransitionAllowed(
+            [NotificationDispatchStatus::Planned, NotificationDispatchStatus::Suppressed, NotificationDispatchStatus::HandoffReady],
+            NotificationDispatchStatus::Cancelled,
+        );
         $this->status = NotificationDispatchStatus::Cancelled;
         $this->reason = $reason;
         $this->cancelledAt = $at ?? new \DateTimeImmutable();
         $this->touchModified(modifiedBy: $modifiedBy);
+    }
+
+    /** @param list<NotificationDispatchStatus> $allowedFrom */
+    private function assertTransitionAllowed(array $allowedFrom, NotificationDispatchStatus $target): void
+    {
+        if (in_array($this->status, $allowedFrom, true)) {
+            return;
+        }
+
+        throw new \DomainException(sprintf(
+            'Dispatch plan %s cannot transition from %s to %s.',
+            $this->id,
+            $this->status->value,
+            $target->value,
+        ));
     }
 }

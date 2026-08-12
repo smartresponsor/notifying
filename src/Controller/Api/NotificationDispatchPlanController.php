@@ -35,9 +35,15 @@ final class NotificationDispatchPlanController extends AbstractController
     {
         $payload = $request->toArray();
 
+        try {
+            $items = $this->dispatchPlanService->markHandedOff(NotificationDispatchPlanService::idsFromPayload($payload));
+        } catch (\DomainException $exception) {
+            return $this->transitionConflict($exception);
+        }
+
         return $this->json([
             'ok' => true,
-            'items' => $this->dispatchPlanService->markHandedOff(NotificationDispatchPlanService::idsFromPayload($payload)),
+            'items' => $items,
         ]);
     }
 
@@ -47,9 +53,15 @@ final class NotificationDispatchPlanController extends AbstractController
         $payload = $request->toArray();
         $reason = (string) ($payload['reason'] ?? 'handoff-failed');
 
+        try {
+            $items = $this->dispatchPlanService->markFailed(NotificationDispatchPlanService::idsFromPayload($payload), $reason);
+        } catch (\DomainException $exception) {
+            return $this->transitionConflict($exception);
+        }
+
         return $this->json([
             'ok' => true,
-            'items' => $this->dispatchPlanService->markFailed(NotificationDispatchPlanService::idsFromPayload($payload), $reason),
+            'items' => $items,
         ]);
     }
 
@@ -59,9 +71,23 @@ final class NotificationDispatchPlanController extends AbstractController
         $payload = $request->toArray();
         $reason = (string) ($payload['reason'] ?? 'cancelled');
 
+        try {
+            $items = $this->dispatchPlanService->cancel(NotificationDispatchPlanService::idsFromPayload($payload), $reason);
+        } catch (\DomainException $exception) {
+            return $this->transitionConflict($exception);
+        }
+
         return $this->json([
             'ok' => true,
-            'items' => $this->dispatchPlanService->cancel(NotificationDispatchPlanService::idsFromPayload($payload), $reason),
+            'items' => $items,
         ]);
+    }
+
+    private function transitionConflict(\DomainException $exception): JsonResponse
+    {
+        return $this->json([
+            'ok' => false,
+            'error' => $exception->getMessage(),
+        ], 409);
     }
 }

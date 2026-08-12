@@ -89,6 +89,8 @@ The current repository creates inbox and push dispatch plans during intent inges
 
 When Mobiling registers a push subscription, Notifying reactivates previously suppressed push plans for that recipient if they were suppressed only because no active subscription existed. Reactivated plans move back to `handoff_ready` and become visible through the dispatch-plan API.
 
+Dispatch lifecycle transitions are guarded in the entity. `handoff_ready` may become `handed_off`; `handoff_ready` or `handed_off` may become `failed`; `planned`, `suppressed`, or `handoff_ready` may become `cancelled`. Repeating an already completed terminal transition is idempotent, while invalid transitions return HTTP `409 Conflict`.
+
 ## Repository layout
 
 ```text

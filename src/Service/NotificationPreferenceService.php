@@ -79,24 +79,28 @@ final class NotificationPreferenceService
             $preference->setPolicy($payload['policy'], $modifiedBy);
         }
         if (array_key_exists('quietHoursStart', $payload) || array_key_exists('quietHoursEnd', $payload) || array_key_exists('timezone', $payload)) {
-            $preference->setQuietHours(
-                isset($payload['quietHoursStart']) ? (string) $payload['quietHoursStart'] : null,
-                isset($payload['quietHoursEnd']) ? (string) $payload['quietHoursEnd'] : null,
-                isset($payload['timezone']) ? (string) $payload['timezone'] : null,
-                $modifiedBy,
-            );
+            [$quietHoursStart, $quietHoursEnd, $timezone] = self::quietHoursFromPayload($payload);
+            $preference->setQuietHours($quietHoursStart, $quietHoursEnd, $timezone, $modifiedBy);
         }
 
         $this->entityManager->flush();
 
         $reactivatedDispatchPlans = [];
         $suppressedDispatchPlans = [];
+        $rescheduledDispatchPlans = [];
         $pushSuppressionReason = self::pushSuppressionReason($preference);
         if (null === $pushSuppressionReason) {
             $reactivatedDispatchPlans = $this->dispatchPlanService->reactivatePushForPreference(
                 recipientType: $preference->recipientType(),
                 recipientKey: $preference->recipientKey(),
                 topic: $preference->topic(),
+                modifiedBy: $modifiedBy,
+            );
+            $rescheduledDispatchPlans = $this->dispatchPlanService->reschedulePushForPreference(
+                recipientType: $preference->recipientType(),
+                recipientKey: $preference->recipientKey(),
+                topic: $preference->topic(),
+                scheduledAt: $preference->quietHoursEndAfter(new \DateTimeImmutable()),
                 modifiedBy: $modifiedBy,
             );
         } else {
@@ -118,11 +122,54 @@ final class NotificationPreferenceService
             'disabledChannels' => $preference->disabledChannels(),
             'muted' => $preference->muted(),
             'mutedUntil' => $preference->mutedUntil()?->format(DATE_ATOM),
+            'quietHoursStart' => $preference->quietHoursStart(),
+            'quietHoursEnd' => $preference->quietHoursEnd(),
+            'timezone' => $preference->timezone(),
             'digestEnabled' => $preference->digestEnabled(),
             'created' => $created,
             'reactivatedDispatchPlans' => $reactivatedDispatchPlans,
             'suppressedDispatchPlans' => $suppressedDispatchPlans,
+            'rescheduledDispatchPlans' => $rescheduledDispatchPlans,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array{0: ?string, 1: ?string, 2: ?string}
+     */
+    private static function quietHoursFromPayload(array $payload): array
+    {
+        foreach (['quietHoursStart', 'quietHoursEnd', 'timezone'] as $field) {
+            if (!array_key_exists($field, $payload)) {
+                throw new \InvalidArgumentException('quietHoursStart, quietHoursEnd, and timezone must be provided together.');
+            }
+        }
+
+        $start = trim((string) ($payload['quietHoursStart'] ?? ''));
+        $end = trim((string) ($payload['quietHoursEnd'] ?? ''));
+        $timezone = trim((string) ($payload['timezone'] ?? ''));
+        if ('' === $start && '' === $end && '' === $timezone) {
+            return [null, null, null];
+        }
+        if ('' === $start || '' === $end || '' === $timezone) {
+            throw new \InvalidArgumentException('quietHoursStart, quietHoursEnd, and timezone must either all be set or all be cleared.');
+        }
+
+        foreach (['quietHoursStart' => $start, 'quietHoursEnd' => $end] as $field => $value) {
+            if (1 !== preg_match('/^(?:[01]\\d|2[0-3]):[0-5]\\d$/', $value)) {
+                throw new \InvalidArgumentException(sprintf('%s must use HH:MM 24-hour format.', $field));
+            }
+        }
+        if ($start === $end) {
+            throw new \InvalidArgumentException('quietHoursStart and quietHoursEnd must differ.');
+        }
+        try {
+            new \DateTimeZone($timezone);
+        } catch (\Exception) {
+            throw new \InvalidArgumentException('timezone must be a valid IANA timezone.');
+        }
+
+        return [$start, $end, $timezone];
     }
 
     private static function pushSuppressionReason(NotificationPreferenceEntity $preference): ?string

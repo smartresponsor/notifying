@@ -69,7 +69,9 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
         $rows = $this->createQueryBuilder('dispatchPlan')
             ->select('dispatchPlan.id')
             ->andWhere('dispatchPlan.status = :status')
+            ->andWhere('(dispatchPlan.scheduledAt IS NULL OR dispatchPlan.scheduledAt <= :claimedAt)')
             ->setParameter('status', NotificationDispatchStatus::HandoffReady)
+            ->setParameter('claimedAt', $claimedAt)
             ->orderBy('dispatchPlan.scheduledAt', 'ASC')
             ->addOrderBy('dispatchPlan.objectAudit.objectCreatedAt', 'ASC')
             ->setMaxResults($limit * 2)
@@ -89,7 +91,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
             }
 
             $updated = $connection->executeStatement(
-                'UPDATE notifying_notification_dispatch_plan SET status = :claimed, claimed_by = :claimedBy, claimed_at = :claimedAt, claim_expires_at = :claimExpiresAt, object_modified_at = :modifiedAt, object_modified_by = :modifiedBy WHERE id = :id AND status = :ready',
+                'UPDATE notifying_notification_dispatch_plan SET status = :claimed, claimed_by = :claimedBy, claimed_at = :claimedAt, claim_expires_at = :claimExpiresAt, object_modified_at = :modifiedAt, object_modified_by = :modifiedBy WHERE id = :id AND status = :ready AND (scheduled_at IS NULL OR scheduled_at <= :claimedAt)',
                 [
                     'claimed' => NotificationDispatchStatus::Claimed->value,
                     'claimedBy' => $claimedBy,

@@ -120,6 +120,45 @@ class NotificationPreferenceEntity implements ObjectIdentifiedInterface, ObjectA
         return $this->mutedUntil;
     }
 
+    public function quietHoursStart(): ?string
+    {
+        return $this->quietHoursStart;
+    }
+
+    public function quietHoursEnd(): ?string
+    {
+        return $this->quietHoursEnd;
+    }
+
+    public function timezone(): ?string
+    {
+        return $this->timezone;
+    }
+
+    public function quietHoursEndAfter(\DateTimeImmutable $now): ?\DateTimeImmutable
+    {
+        if (null === $this->quietHoursStart || null === $this->quietHoursEnd || null === $this->timezone) {
+            return null;
+        }
+
+        $timezone = new \DateTimeZone($this->timezone);
+        $localNow = $now->setTimezone($timezone);
+        [$startHour, $startMinute] = array_map('intval', explode(':', $this->quietHoursStart));
+        [$endHour, $endMinute] = array_map('intval', explode(':', $this->quietHoursEnd));
+        $start = $localNow->setTime($startHour, $startMinute, 0);
+        $end = $localNow->setTime($endHour, $endMinute, 0);
+
+        if ($start < $end) {
+            return $localNow >= $start && $localNow < $end ? $end : null;
+        }
+
+        if ($localNow >= $start) {
+            return $end->modify('+1 day');
+        }
+
+        return $localNow < $end ? $end : null;
+    }
+
     public function digestEnabled(): bool
     {
         return $this->digestEnabled;

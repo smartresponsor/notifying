@@ -218,16 +218,33 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
     }
 
     /** @param array<string, mixed> $metadata */
-    public function markHandoffReady(string $target, array $metadata = [], ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
+    public function markHandoffReady(string $target, array $metadata = [], ?string $modifiedBy = null, ?\DateTimeImmutable $at = null, string $reason = 'push-handoff-ready'): void
     {
         $this->assertTransitionAllowed([NotificationDispatchStatus::Suppressed], NotificationDispatchStatus::HandoffReady);
         $this->status = NotificationDispatchStatus::HandoffReady;
-        $this->reason = 'push-handoff-ready';
+        $this->reason = $reason;
         $this->target = $target;
         $this->scheduledAt = $at ?? new \DateTimeImmutable();
         $this->metadata = array_replace($this->metadata, $metadata);
         $this->failedAt = null;
         $this->cancelledAt = null;
+        $this->touchModified(modifiedBy: $modifiedBy);
+    }
+
+    /** @param array<string, mixed> $metadata */
+    public function rescheduleHandoffReady(\DateTimeImmutable $scheduledAt, string $reason, array $metadata = [], ?string $modifiedBy = null): void
+    {
+        if (NotificationDispatchStatus::HandoffReady !== $this->status) {
+            throw new \DomainException(sprintf(
+                'Dispatch plan %s cannot be rescheduled while in %s status.',
+                $this->id,
+                $this->status->value,
+            ));
+        }
+
+        $this->scheduledAt = $scheduledAt;
+        $this->reason = $reason;
+        $this->metadata = array_replace($this->metadata, $metadata);
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 

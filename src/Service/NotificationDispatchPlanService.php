@@ -171,6 +171,29 @@ final class NotificationDispatchPlanService
     }
 
     /**
+     * @return list<array<string, mixed>>
+     */
+    public function reschedulePushForPreference(RecipientType $recipientType, string $recipientKey, string $topic, ?\DateTimeImmutable $scheduledAt, ?string $modifiedBy = null): array
+    {
+        if ('' === $recipientKey || '' === $topic) {
+            return [];
+        }
+
+        $now = new \DateTimeImmutable();
+        $effectiveAt = $scheduledAt ?? $now;
+        $reason = $scheduledAt instanceof \DateTimeImmutable && $scheduledAt > $now ? 'push-quiet-hours-deferred' : 'push-handoff-ready';
+        $plans = $this->dispatchPlanRepository->listHandoffReadyPushForRecipientTopic($recipientType, $recipientKey, $topic);
+        foreach ($plans as $plan) {
+            $plan->rescheduleHandoffReady($effectiveAt, $reason, ['scheduledBy' => 'preference-update'], $modifiedBy);
+        }
+        if ([] !== $plans) {
+            $this->entityManager->flush();
+        }
+
+        return NotificationService::dispatchPlanSummary($plans);
+    }
+
+    /**
      * @param list<string> $dispatchPlanIds
      * @return list<array<string, mixed>>
      */

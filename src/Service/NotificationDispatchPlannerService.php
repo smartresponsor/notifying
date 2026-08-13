@@ -46,12 +46,19 @@ final class NotificationDispatchPlannerService
 
         $pushReason = $this->suppressionReason(NotificationChannel::Push, $preference);
         $pushTarget = null;
+        $pushScheduledAt = new \DateTimeImmutable();
+        $pushDeferred = false;
         if (null === $pushReason) {
             $subscriptions = $this->subscriptionRepository->listActiveForRecipient($recipient->recipientType(), $recipient->recipientKey());
             if ([] === $subscriptions) {
                 $pushReason = 'no-active-push-subscription';
             } else {
                 $pushTarget = 'subscription:'.$subscriptions[0]->tokenHash();
+                $quietHoursEnd = $preference?->quietHoursEndAfter($pushScheduledAt);
+                if ($quietHoursEnd instanceof \DateTimeImmutable) {
+                    $pushScheduledAt = $quietHoursEnd;
+                    $pushDeferred = true;
+                }
             }
         }
 
@@ -59,9 +66,10 @@ final class NotificationDispatchPlannerService
             recipient: $recipient,
             channel: NotificationChannel::Push,
             status: null === $pushReason ? NotificationDispatchStatus::HandoffReady : NotificationDispatchStatus::Suppressed,
-            reason: $pushReason ?? 'push-handoff-ready',
+            reason: $pushReason ?? ($pushDeferred ? 'push-quiet-hours-deferred' : 'push-handoff-ready'),
             target: $pushTarget,
             payload: $notification->payload(),
+            scheduledAt: $pushScheduledAt,
             metadata: ['topic' => $notification->topic(), 'handoff' => 'delivering'],
             createdBy: $createdBy,
         );
@@ -81,7 +89,8 @@ final class NotificationDispatchPlannerService
         ?string $target,
         array $payload,
         array $metadata,
-        ?string $createdBy,
+        ?\DateTimeImmutable $scheduledAt = null,
+        ?string $createdBy = null,
     ): NotificationDispatchPlanEntity {
         $existing = $this->dispatchPlanRepository->findForRecipientEntryAndChannel($recipient, $channel);
         if ($existing instanceof NotificationDispatchPlanEntity) {
@@ -96,7 +105,7 @@ final class NotificationDispatchPlannerService
             status: $status,
             reason: $reason,
             target: $target,
-            scheduledAt: new \DateTimeImmutable(),
+            scheduledAt: $scheduledAt ?? new \DateTimeImmutable(),
             payload: $payload,
             metadata: $metadata,
             createdBy: $createdBy,

@@ -25,12 +25,20 @@ final class NotificationPreferenceService
      */
     public function upsertPreference(array $payload, ?string $modifiedBy = null): array
     {
-        $recipientType = RecipientType::tryFrom((string) ($payload['recipientType'] ?? 'user')) ?? RecipientType::User;
-        $recipientKey = (string) ($payload['recipientKey'] ?? '');
-        $topic = (string) ($payload['topic'] ?? 'default');
+        $recipientTypeValue = (string) ($payload['recipientType'] ?? 'user');
+        $recipientType = RecipientType::tryFrom($recipientTypeValue);
+        if (!$recipientType instanceof RecipientType) {
+            throw new \InvalidArgumentException('recipientType is invalid.');
+        }
 
-        if ('' === trim($recipientKey)) {
+        $recipientKey = trim((string) ($payload['recipientKey'] ?? ''));
+        $topic = trim((string) ($payload['topic'] ?? 'default'));
+
+        if ('' === $recipientKey) {
             throw new \InvalidArgumentException('recipientKey is required.');
+        }
+        if ('' === $topic) {
+            throw new \InvalidArgumentException('topic is required.');
         }
 
         $preference = $this->preferenceRepository->findForTopic($recipientType, $recipientKey, $topic);
@@ -48,10 +56,24 @@ final class NotificationPreferenceService
             $preference->setDisabledChannels(self::channelsFromStrings($payload['disabledChannels']), $modifiedBy);
         }
         if (array_key_exists('muted', $payload)) {
-            ((bool) $payload['muted']) ? $preference->mute(modifiedBy: $modifiedBy) : $preference->unmute($modifiedBy);
+            $muted = self::strictBoolean($payload['muted'], 'muted');
+            if ($muted) {
+                $mutedUntil = null;
+                if (array_key_exists('mutedUntil', $payload) && null !== $payload['mutedUntil'] && '' !== $payload['mutedUntil']) {
+                    $mutedUntil = self::dateTimeFromPayload($payload['mutedUntil'], 'mutedUntil');
+                }
+                $preference->mute($mutedUntil, $modifiedBy);
+            } else {
+                if (array_key_exists('mutedUntil', $payload) && null !== $payload['mutedUntil'] && '' !== $payload['mutedUntil']) {
+                    throw new \InvalidArgumentException('mutedUntil requires muted=true.');
+                }
+                $preference->unmute($modifiedBy);
+            }
+        } elseif (array_key_exists('mutedUntil', $payload)) {
+            throw new \InvalidArgumentException('mutedUntil requires muted to be provided.');
         }
         if (array_key_exists('digestEnabled', $payload)) {
-            $preference->setDigest((bool) $payload['digestEnabled'], isset($payload['digestFrequency']) ? (string) $payload['digestFrequency'] : null, $modifiedBy);
+            $preference->setDigest(self::strictBoolean($payload['digestEnabled'], 'digestEnabled'), isset($payload['digestFrequency']) ? (string) $payload['digestFrequency'] : null, $modifiedBy);
         }
         if (isset($payload['policy']) && is_array($payload['policy'])) {
             $preference->setPolicy($payload['policy'], $modifiedBy);
@@ -122,6 +144,40 @@ final class NotificationPreferenceService
         return null;
     }
 
+    private static function strictBoolean(mixed $value, string $field): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (0 === $value || 1 === $value || '0' === $value || '1' === $value) {
+            return (bool) (int) $value;
+        }
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if ('true' === $normalized) {
+                return true;
+            }
+            if ('false' === $normalized) {
+                return false;
+            }
+        }
+
+        throw new \InvalidArgumentException(sprintf('%s must be a boolean value.', $field));
+    }
+
+    private static function dateTimeFromPayload(mixed $value, string $field): \DateTimeImmutable
+    {
+        if (!is_string($value) || '' === trim($value)) {
+            throw new \InvalidArgumentException(sprintf('%s must be an ISO-8601 date-time string.', $field));
+        }
+
+        try {
+            return new \DateTimeImmutable($value);
+        } catch (\Exception) {
+            throw new \InvalidArgumentException(sprintf('%s must be an ISO-8601 date-time string.', $field));
+        }
+    }
+
     /**
      * @param list<mixed> $values
      * @return list<NotificationChannel>
@@ -131,12 +187,13 @@ final class NotificationPreferenceService
         $channels = [];
         foreach ($values as $value) {
             $channel = NotificationChannel::tryFrom((string) $value);
-            if ($channel instanceof NotificationChannel) {
-                $channels[] = $channel;
+            if (!$channel instanceof NotificationChannel) {
+                throw new \InvalidArgumentException(sprintf('Unknown notification channel: %s.', (string) $value));
             }
+            $channels[] = $channel;
         }
 
-        return $channels;
+        return array_values(array_unique($channels, SORT_REGULAR));
     }
 
     private static function newUuid(): string

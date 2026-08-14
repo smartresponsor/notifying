@@ -51,12 +51,12 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
      *
      * @return list<NotificationDispatchPlanEntity>
      */
-    public function claimHandoffReady(string $claimedBy, \DateTimeImmutable $claimedAt, \DateTimeImmutable $claimExpiresAt, int $limit = 100): array
+    public function claimHandoffReady(string $claimedBy, string $claimLeaseHash, \DateTimeImmutable $claimedAt, \DateTimeImmutable $claimExpiresAt, int $limit = 100): array
     {
         $limit = max(1, min(500, $limit));
         $connection = $this->getEntityManager()->getConnection();
         $connection->executeStatement(
-            'UPDATE notifying_notification_dispatch_plan SET status = :ready, claimed_by = NULL, claimed_at = NULL, claim_expires_at = NULL, object_modified_at = :modifiedAt, object_modified_by = :modifiedBy WHERE status = :claimed AND claim_expires_at IS NOT NULL AND claim_expires_at <= :now',
+            'UPDATE notifying_notification_dispatch_plan SET status = :ready, claimed_by = NULL, claimed_at = NULL, claim_expires_at = NULL, claim_lease_hash = NULL, object_modified_at = :modifiedAt, object_modified_by = :modifiedBy WHERE status = :claimed AND claim_expires_at IS NOT NULL AND claim_expires_at <= :now',
             [
                 'ready' => NotificationDispatchStatus::HandoffReady->value,
                 'modifiedAt' => $claimedAt->format('Y-m-d H:i:s'),
@@ -91,12 +91,13 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
             }
 
             $updated = $connection->executeStatement(
-                'UPDATE notifying_notification_dispatch_plan SET status = :claimed, claimed_by = :claimedBy, claimed_at = :claimedAt, claim_expires_at = :claimExpiresAt, object_modified_at = :modifiedAt, object_modified_by = :modifiedBy WHERE id = :id AND status = :ready AND (scheduled_at IS NULL OR scheduled_at <= :claimedAt)',
+                'UPDATE notifying_notification_dispatch_plan SET status = :claimed, claimed_by = :claimedBy, claimed_at = :claimedAt, claim_expires_at = :claimExpiresAt, claim_lease_hash = :claimLeaseHash, object_modified_at = :modifiedAt, object_modified_by = :modifiedBy WHERE id = :id AND status = :ready AND (scheduled_at IS NULL OR scheduled_at <= :claimedAt)',
                 [
                     'claimed' => NotificationDispatchStatus::Claimed->value,
                     'claimedBy' => $claimedBy,
                     'claimedAt' => $claimedAt->format('Y-m-d H:i:s'),
                     'claimExpiresAt' => $claimExpiresAt->format('Y-m-d H:i:s'),
+                    'claimLeaseHash' => $claimLeaseHash,
                     'modifiedAt' => $claimedAt->format('Y-m-d H:i:s'),
                     'modifiedBy' => $claimedBy,
                     'id' => $id,
@@ -108,7 +109,12 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
             }
         }
 
-        return $this->findByIds($claimedIds);
+        $plans = $this->findByIds($claimedIds);
+        foreach ($plans as $plan) {
+            $this->getEntityManager()->refresh($plan);
+        }
+
+        return $plans;
     }
 
     /**

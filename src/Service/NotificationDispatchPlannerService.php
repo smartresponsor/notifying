@@ -54,9 +54,9 @@ final class NotificationDispatchPlannerService
                 $pushReason = 'no-active-push-subscription';
             } else {
                 $pushTarget = 'subscription:'.$subscriptions[0]->tokenHash();
-                $quietHoursEnd = $preference?->quietHoursEndAfter($pushScheduledAt);
-                if ($quietHoursEnd instanceof \DateTimeImmutable) {
-                    $pushScheduledAt = $quietHoursEnd;
+                $deferredUntil = $preference?->pushDeferredUntil($pushScheduledAt);
+                if ($deferredUntil instanceof \DateTimeImmutable) {
+                    $pushScheduledAt = $deferredUntil;
                     $pushDeferred = true;
                 }
             }
@@ -66,7 +66,7 @@ final class NotificationDispatchPlannerService
             recipient: $recipient,
             channel: NotificationChannel::Push,
             status: null === $pushReason ? NotificationDispatchStatus::HandoffReady : NotificationDispatchStatus::Suppressed,
-            reason: $pushReason ?? ($pushDeferred ? 'push-quiet-hours-deferred' : 'push-handoff-ready'),
+            reason: $pushReason ?? ($pushDeferred ? 'push-policy-deferred' : 'push-handoff-ready'),
             target: $pushTarget,
             payload: $notification->payload(),
             scheduledAt: $pushScheduledAt,
@@ -124,6 +124,10 @@ final class NotificationDispatchPlannerService
     {
         if (!$preference instanceof NotificationPreferenceEntity) {
             return null;
+        }
+
+        if (NotificationChannel::Push === $channel) {
+            return $preference->pushSuppressionReason();
         }
 
         $now = new \DateTimeImmutable();

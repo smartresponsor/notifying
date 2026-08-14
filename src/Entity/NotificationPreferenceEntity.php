@@ -159,6 +159,38 @@ class NotificationPreferenceEntity implements ObjectIdentifiedInterface, ObjectA
         return $localNow < $end ? $end : null;
     }
 
+    public function pushSuppressionReason(): ?string
+    {
+        if ($this->muted && null === $this->mutedUntil) {
+            return 'recipient-muted';
+        }
+
+        if ([] !== $this->enabledChannels && !in_array(NotificationChannel::Push->value, $this->enabledChannels, true)) {
+            return 'channel-not-enabled';
+        }
+
+        if (in_array(NotificationChannel::Push->value, $this->disabledChannels, true)) {
+            return 'channel-disabled';
+        }
+
+        return null;
+    }
+
+    public function pushDeferredUntil(\DateTimeImmutable $now): ?\DateTimeImmutable
+    {
+        $effectiveAt = $now;
+        if ($this->muted && $this->mutedUntil instanceof \DateTimeImmutable && $this->mutedUntil > $now) {
+            $effectiveAt = $this->mutedUntil;
+        }
+
+        $quietHoursEnd = $this->quietHoursEndAfter($effectiveAt);
+        if ($quietHoursEnd instanceof \DateTimeImmutable) {
+            return $quietHoursEnd;
+        }
+
+        return $effectiveAt > $now ? $effectiveAt : null;
+    }
+
     public function digestEnabled(): bool
     {
         return $this->digestEnabled;

@@ -74,6 +74,9 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $claimExpiresAt = null;
 
+    #[ORM\Column(name: 'claim_lease_hash', length: 64, nullable: true)]
+    private ?string $claimLeaseHash = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $handedOffAt = null;
 
@@ -265,6 +268,23 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
     }
 
     /** @param array<string, mixed> $metadata */
+    public function keepSuppressed(string $reason, array $metadata = [], ?string $modifiedBy = null): void
+    {
+        $reason = trim($reason);
+        if ('' === $reason) {
+            throw new \InvalidArgumentException('Suppression reason is required.');
+        }
+        if (NotificationDispatchStatus::Suppressed !== $this->status) {
+            throw new \DomainException(sprintf('Dispatch plan %s is not suppressed.', $this->id));
+        }
+
+        $this->reason = $reason;
+        $this->target = null;
+        $this->metadata = array_replace($this->metadata, $metadata);
+        $this->touchModified(modifiedBy: $modifiedBy);
+    }
+
+    /** @param array<string, mixed> $metadata */
     public function retargetHandoffReady(string $target, array $metadata = [], ?string $modifiedBy = null): void
     {
         if (NotificationDispatchStatus::HandoffReady !== $this->status) {
@@ -280,10 +300,13 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 
-    public function claim(string $claimedBy, \DateTimeImmutable $expiresAt, ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
+    public function claim(string $claimedBy, string $claimLeaseHash, \DateTimeImmutable $expiresAt, ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
     {
         if ('' === trim($claimedBy)) {
             throw new \InvalidArgumentException('claimedBy is required.');
+        }
+        if (!preg_match('/^[a-f0-9]{64}$/', $claimLeaseHash)) {
+            throw new \InvalidArgumentException('claimLeaseHash must be a SHA-256 hash.');
         }
 
         $this->assertTransitionAllowed([NotificationDispatchStatus::HandoffReady], NotificationDispatchStatus::Claimed);
@@ -296,6 +319,7 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
         $this->claimedBy = $claimedBy;
         $this->claimedAt = $claimedAt;
         $this->claimExpiresAt = $expiresAt;
+        $this->claimLeaseHash = $claimLeaseHash;
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 
@@ -314,10 +338,11 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
         $this->claimedBy = null;
         $this->claimedAt = null;
         $this->claimExpiresAt = null;
+        $this->claimLeaseHash = null;
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 
-    public function markHandedOff(string $claimedBy, ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
+    public function markHandedOff(string $claimedBy, string $claimLeaseId, ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
     {
         if (NotificationDispatchStatus::HandedOff === $this->status) {
             return;
@@ -325,19 +350,15 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
 
         $this->assertTransitionAllowed([NotificationDispatchStatus::Claimed], NotificationDispatchStatus::HandedOff);
         $at ??= new \DateTimeImmutable();
-        if ($this->claimedBy !== $claimedBy) {
-            throw new \DomainException(sprintf('Dispatch plan %s is claimed by another worker.', $this->id));
-        }
-        if (null === $this->claimExpiresAt || $this->claimExpiresAt <= $at) {
-            throw new \DomainException(sprintf('Dispatch plan %s claim has expired.', $this->id));
-        }
+        $this->assertCurrentClaimLease($claimedBy, $claimLeaseId, $at);
 
         $this->status = NotificationDispatchStatus::HandedOff;
+        $this->claimLeaseHash = null;
         $this->handedOffAt = $at;
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 
-    public function markFailed(string $reason, ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
+    public function markFailed(string $reason, ?string $claimedBy = null, ?string $claimLeaseId = null, ?string $modifiedBy = null, ?\DateTimeImmutable $at = null): void
     {
         if (NotificationDispatchStatus::Failed === $this->status) {
             return;
@@ -347,9 +368,15 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
             [NotificationDispatchStatus::HandoffReady, NotificationDispatchStatus::Claimed, NotificationDispatchStatus::HandedOff],
             NotificationDispatchStatus::Failed,
         );
+        $at ??= new \DateTimeImmutable();
+        if (NotificationDispatchStatus::Claimed === $this->status) {
+            $this->assertCurrentClaimLease((string) $claimedBy, (string) $claimLeaseId, $at);
+        }
+
         $this->status = NotificationDispatchStatus::Failed;
         $this->reason = $reason;
-        $this->failedAt = $at ?? new \DateTimeImmutable();
+        $this->claimLeaseHash = null;
+        $this->failedAt = $at;
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 
@@ -367,6 +394,19 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
         $this->reason = $reason;
         $this->cancelledAt = $at ?? new \DateTimeImmutable();
         $this->touchModified(modifiedBy: $modifiedBy);
+    }
+
+    private function assertCurrentClaimLease(string $claimedBy, string $claimLeaseId, \DateTimeImmutable $at): void
+    {
+        if ($this->claimedBy !== $claimedBy) {
+            throw new \DomainException(sprintf('Dispatch plan %s is claimed by another worker.', $this->id));
+        }
+        if ('' === $claimLeaseId || null === $this->claimLeaseHash || !hash_equals($this->claimLeaseHash, hash('sha256', $claimLeaseId))) {
+            throw new \DomainException(sprintf('Dispatch plan %s claim lease does not match.', $this->id));
+        }
+        if (null === $this->claimExpiresAt || $this->claimExpiresAt <= $at) {
+            throw new \DomainException(sprintf('Dispatch plan %s claim has expired.', $this->id));
+        }
     }
 
     /** @param list<NotificationDispatchStatus> $allowedFrom */

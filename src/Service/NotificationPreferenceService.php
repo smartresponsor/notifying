@@ -100,7 +100,7 @@ final class NotificationPreferenceService
                 recipientType: $preference->recipientType(),
                 recipientKey: $preference->recipientKey(),
                 topic: $preference->topic(),
-                scheduledAt: $preference->quietHoursEndAfter(new \DateTimeImmutable()),
+                scheduledAt: $preference->pushDeferredUntil(new \DateTimeImmutable()),
                 modifiedBy: $modifiedBy,
             );
         } else {
@@ -163,9 +163,7 @@ final class NotificationPreferenceService
         if ($start === $end) {
             throw new \InvalidArgumentException('quietHoursStart and quietHoursEnd must differ.');
         }
-        try {
-            new \DateTimeZone($timezone);
-        } catch (\Exception) {
+        if (!in_array($timezone, \DateTimeZone::listIdentifiers(\DateTimeZone::ALL_WITH_BC), true)) {
             throw new \InvalidArgumentException('timezone must be a valid IANA timezone.');
         }
 
@@ -174,21 +172,7 @@ final class NotificationPreferenceService
 
     private static function pushSuppressionReason(NotificationPreferenceEntity $preference): ?string
     {
-        $now = new \DateTimeImmutable();
-        if ($preference->muted() && (null === $preference->mutedUntil() || $preference->mutedUntil() > $now)) {
-            return 'recipient-muted';
-        }
-
-        $enabledChannels = $preference->enabledChannels();
-        if ([] !== $enabledChannels && !in_array(NotificationChannel::Push->value, $enabledChannels, true)) {
-            return 'channel-not-enabled';
-        }
-
-        if (in_array(NotificationChannel::Push->value, $preference->disabledChannels(), true)) {
-            return 'channel-disabled';
-        }
-
-        return null;
+        return $preference->pushSuppressionReason();
     }
 
     private static function strictBoolean(mixed $value, string $field): bool

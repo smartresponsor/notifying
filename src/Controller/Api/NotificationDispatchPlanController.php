@@ -63,6 +63,7 @@ final class NotificationDispatchPlanController extends AbstractController
             $items = $this->dispatchPlanService->markHandedOff(
                 NotificationDispatchPlanService::idsFromPayload($payload),
                 (string) ($payload['claimedBy'] ?? ''),
+                (string) ($payload['claimLeaseId'] ?? ''),
             );
         } catch (\InvalidArgumentException $exception) {
             return $this->json([
@@ -86,7 +87,12 @@ final class NotificationDispatchPlanController extends AbstractController
         $reason = (string) ($payload['reason'] ?? 'handoff-failed');
 
         try {
-            $items = $this->dispatchPlanService->markFailed(NotificationDispatchPlanService::idsFromPayload($payload), $reason);
+            $items = $this->dispatchPlanService->markFailed(
+                NotificationDispatchPlanService::idsFromPayload($payload),
+                $reason,
+                isset($payload['claimedBy']) ? (string) $payload['claimedBy'] : null,
+                isset($payload['claimLeaseId']) ? (string) $payload['claimLeaseId'] : null,
+            );
         } catch (\DomainException $exception) {
             return $this->transitionConflict($exception);
         }

@@ -8,6 +8,7 @@
 /bin/notifying-runtime-check.ps1
 /phpunit.xml
 /.phpunit.cache/
+/.phpunit.result.cache
 /coverage/
 /.idea/
 /.vscode/

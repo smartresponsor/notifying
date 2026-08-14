@@ -74,6 +74,9 @@
       "App\\Notifying\\Tests\\": "tests/"
     }
   },
+  "scripts": {
+    "test": "phpunit --testdox tests"
+  },
   "config": {
     "allow-plugins": {
       "symfony/flex": true,

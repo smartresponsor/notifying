@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="vendor/autoload.php" colors="true">
+  <php>
+    <env name="APP_ENV" value="test" force="true"/>
+    <env name="KERNEL_CLASS" value="App\Notifying\Kernel"/>
+  </php>
+
+  <testsuites>
+    <testsuite name="Notifying">
+      <directory>tests</directory>
+    </testsuite>
+  </testsuites>
+</phpunit>
+

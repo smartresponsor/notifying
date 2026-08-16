@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifying\Controller\Api;
 
 use App\Notifying\Service\NotificationDispatchPlanService;
+use App\Notifying\Service\NotificationServiceAccessService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,12 +15,14 @@ final class NotificationDispatchPlanController extends AbstractController
 {
     public function __construct(
         private readonly NotificationDispatchPlanService $dispatchPlanService,
+        private readonly NotificationServiceAccessService $serviceAccess,
     ) {
     }
 
     #[Route('/api/notification/dispatch-plan', name: 'notifying_api_notification_dispatch_plan', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
+        $this->serviceAccess->requireService($request, NotificationServiceAccessService::SCOPE_DISPATCH_CONSUME);
         $recipientEntryId = (string) $request->query->get('recipientEntryId', '');
         $limit = (int) $request->query->get('limit', 100);
 
@@ -34,10 +37,15 @@ final class NotificationDispatchPlanController extends AbstractController
     public function claim(Request $request): JsonResponse
     {
         $payload = $request->toArray();
+        $claimedBy = $this->serviceAccess->requireService(
+            $request,
+            NotificationServiceAccessService::SCOPE_DISPATCH_CONSUME,
+            isset($payload['claimedBy']) ? (string) $payload['claimedBy'] : null,
+        );
 
         try {
             $items = $this->dispatchPlanService->claim(
-                claimedBy: (string) ($payload['claimedBy'] ?? ''),
+                claimedBy: $claimedBy,
                 limit: (int) ($payload['limit'] ?? 100),
                 leaseSeconds: (int) ($payload['leaseSeconds'] ?? 60),
             );
@@ -58,11 +66,16 @@ final class NotificationDispatchPlanController extends AbstractController
     public function handoff(Request $request): JsonResponse
     {
         $payload = $request->toArray();
+        $claimedBy = $this->serviceAccess->requireService(
+            $request,
+            NotificationServiceAccessService::SCOPE_DISPATCH_CONSUME,
+            isset($payload['claimedBy']) ? (string) $payload['claimedBy'] : null,
+        );
 
         try {
             $items = $this->dispatchPlanService->markHandedOff(
                 NotificationDispatchPlanService::idsFromPayload($payload),
-                (string) ($payload['claimedBy'] ?? ''),
+                $claimedBy,
                 (string) ($payload['claimLeaseId'] ?? ''),
             );
         } catch (\InvalidArgumentException $exception) {
@@ -85,12 +98,17 @@ final class NotificationDispatchPlanController extends AbstractController
     {
         $payload = $request->toArray();
         $reason = (string) ($payload['reason'] ?? 'handoff-failed');
+        $claimedBy = $this->serviceAccess->requireService(
+            $request,
+            NotificationServiceAccessService::SCOPE_DISPATCH_CONSUME,
+            isset($payload['claimedBy']) ? (string) $payload['claimedBy'] : null,
+        );
 
         try {
             $items = $this->dispatchPlanService->markFailed(
                 NotificationDispatchPlanService::idsFromPayload($payload),
                 $reason,
-                isset($payload['claimedBy']) ? (string) $payload['claimedBy'] : null,
+                $claimedBy,
                 isset($payload['claimLeaseId']) ? (string) $payload['claimLeaseId'] : null,
             );
         } catch (\DomainException $exception) {
@@ -108,9 +126,10 @@ final class NotificationDispatchPlanController extends AbstractController
     {
         $payload = $request->toArray();
         $reason = (string) ($payload['reason'] ?? 'cancelled');
+        $serviceKey = $this->serviceAccess->requireService($request, NotificationServiceAccessService::SCOPE_DISPATCH_CONSUME);
 
         try {
-            $items = $this->dispatchPlanService->cancel(NotificationDispatchPlanService::idsFromPayload($payload), $reason);
+            $items = $this->dispatchPlanService->cancel(NotificationDispatchPlanService::idsFromPayload($payload), $reason, $serviceKey);
         } catch (\DomainException $exception) {
             return $this->transitionConflict($exception);
         }

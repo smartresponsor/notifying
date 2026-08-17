@@ -1,7 +1,7 @@
 {
   "name": "smartresponsor/notifying",
   "description": "Smart Responsor Notifying platform component: notification center, inbox, preferences, subscriptions, and delivery planning.",
-  "type": "project",
+  "type": "symfony-bundle",
   "license": "proprietary",
   "minimum-stability": "dev",
   "prefer-stable": true,

@@ -64,7 +64,7 @@ Notifying converts those intents into notification records, recipient inbox entr
 
 Delivering physically sends prepared payloads through provider transports and reports delivery-state outcomes in its own storage.
 
-Mobiling consumes Notifying APIs for inbox, unread-count, mark-read, ack, preferences, and push subscription registration.
+Mobiling consumes Notifying APIs for inbox, unread/count, mark/read, ack, preferences, and push subscription registration.
 
 Recipient-facing APIs are ownership-scoped. The Host may provide a verified recipient through the `notifying_recipient_key` request attribute; otherwise Notifying uses the authenticated Symfony `UserInterface::getUserIdentifier()`. Standalone `dev`/`test` runtime additionally accepts `X-Notifying-Recipient-Key` for smoke/testing only. Caller-supplied `recipientKey` is treated only as an assertion and must match the verified identity; production does not trust it as authentication. Inbox mutations also verify that each recipient entry belongs to that identity, and subscription disable verifies token/device ownership before changing state.
 
@@ -77,16 +77,16 @@ Preference writes use strict recipient type, channel, and boolean validation. Ti
 | Method | Path | Responsibility |
 | --- | --- | --- |
 | `GET` | `/api/notification/inbox` | List inbox notifications for a recipient |
-| `GET` | `/api/notification/unread-count` | Return unread count for a recipient |
-| `POST` | `/api/notification/mark-read` | Mark one or more notifications as read |
+| `GET` | `/api/notification/unread/count` | Return unread count for a recipient |
+| `POST` | `/api/notification/mark/read` | Mark one or more notifications as read |
 | `POST` | `/api/notification/ack` | Acknowledge a notification |
 | `POST` | `/api/notification/subscription` | Register, update, or disable a device push subscription |
 | `POST` | `/api/notification/pref` | Upsert recipient notification preferences |
-| `GET` | `/api/notification/dispatch-plan` | Inspect planned or suppressed notification dispatch handoffs |
-| `POST` | `/api/notification/dispatch-plan/claim` | Atomically lease handoff-ready plans to one Delivering worker |
-| `POST` | `/api/notification/dispatch-plan/handoff` | Mark claimed dispatch plans as handed off to Delivering |
-| `POST` | `/api/notification/dispatch-plan/fail` | Mark dispatch plans as failed without retrying provider sends |
-| `POST` | `/api/notification/dispatch-plan/cancel` | Cancel dispatch plans before physical delivery |
+| `GET` | `/api/notification/dispatch/plan` | Inspect planned or suppressed notification dispatch handoffs |
+| `POST` | `/api/notification/dispatch/plan/claim` | Atomically lease handoff-ready plans to one Delivering worker |
+| `POST` | `/api/notification/dispatch/plan/handoff` | Mark claimed dispatch plans as handed off to Delivering |
+| `POST` | `/api/notification/dispatch/plan/fail` | Mark dispatch plans as failed without retrying provider sends |
+| `POST` | `/api/notification/dispatch/plan/cancel` | Cancel dispatch plans before physical delivery |
 
 ## Dispatch planning model
 

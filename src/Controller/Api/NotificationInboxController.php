@@ -37,7 +37,7 @@ final class NotificationInboxController extends AbstractController
         ]);
     }
 
-    #[Route('/api/notification/unread-count', name: 'notifying_api_notification_unread_count', methods: ['GET'])]
+    #[Route('/api/notification/unread/count', name: 'notifying_api_notification_unread_count', methods: ['GET'])]
     public function unreadCount(Request $request): JsonResponse
     {
         $recipientKey = $this->recipientAccess->requireRecipientKey(

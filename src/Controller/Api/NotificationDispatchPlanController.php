@@ -19,7 +19,7 @@ final class NotificationDispatchPlanController extends AbstractController
     ) {
     }
 
-    #[Route('/api/notification/dispatch-plan', name: 'notifying_api_notification_dispatch_plan', methods: ['GET'])]
+    #[Route('/api/notification/dispatch/plan', name: 'notifying_api_notification_dispatch_plan', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
         $this->serviceAccess->requireService($request, NotificationServiceAccessService::SCOPE_DISPATCH_CONSUME);
@@ -33,7 +33,7 @@ final class NotificationDispatchPlanController extends AbstractController
         ]);
     }
 
-    #[Route('/api/notification/dispatch-plan/claim', name: 'notifying_api_notification_dispatch_plan_claim', methods: ['POST'])]
+    #[Route('/api/notification/dispatch/plan/claim', name: 'notifying_api_notification_dispatch_plan_claim', methods: ['POST'])]
     public function claim(Request $request): JsonResponse
     {
         $payload = $request->toArray();
@@ -62,7 +62,7 @@ final class NotificationDispatchPlanController extends AbstractController
         ]);
     }
 
-    #[Route('/api/notification/dispatch-plan/handoff', name: 'notifying_api_notification_dispatch_plan_handoff', methods: ['POST'])]
+    #[Route('/api/notification/dispatch/plan/handoff', name: 'notifying_api_notification_dispatch_plan_handoff', methods: ['POST'])]
     public function handoff(Request $request): JsonResponse
     {
         $payload = $request->toArray();
@@ -93,7 +93,7 @@ final class NotificationDispatchPlanController extends AbstractController
         ]);
     }
 
-    #[Route('/api/notification/dispatch-plan/fail', name: 'notifying_api_notification_dispatch_plan_fail', methods: ['POST'])]
+    #[Route('/api/notification/dispatch/plan/fail', name: 'notifying_api_notification_dispatch_plan_fail', methods: ['POST'])]
     public function fail(Request $request): JsonResponse
     {
         $payload = $request->toArray();
@@ -121,7 +121,7 @@ final class NotificationDispatchPlanController extends AbstractController
         ]);
     }
 
-    #[Route('/api/notification/dispatch-plan/cancel', name: 'notifying_api_notification_dispatch_plan_cancel', methods: ['POST'])]
+    #[Route('/api/notification/dispatch/plan/cancel', name: 'notifying_api_notification_dispatch_plan_cancel', methods: ['POST'])]
     public function cancel(Request $request): JsonResponse
     {
         $payload = $request->toArray();

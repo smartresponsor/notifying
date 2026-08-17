@@ -19,7 +19,7 @@ final class NotificationMutationController extends AbstractController
     ) {
     }
 
-    #[Route('/api/notification/mark-read', name: 'notifying_api_notification_mark_read', methods: ['POST'])]
+    #[Route('/api/notification/mark/read', name: 'notifying_api_notification_mark_read', methods: ['POST'])]
     public function markRead(Request $request): JsonResponse
     {
         $payload = $request->toArray();

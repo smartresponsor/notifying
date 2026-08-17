@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifying\Service;
 
+use App\Notifying\Entity\NotificationDispatchPlanEntity;
 use App\Notifying\Enum\RecipientType;
 use App\Notifying\Repository\NotificationDispatchPlanRepository;
 use App\Notifying\Repository\NotificationPreferenceRepository;
@@ -64,8 +65,8 @@ final class NotificationDispatchPlanService
         );
 
         return array_map(
-            static fn (array $item): array => $item + ['claimLeaseId' => $claimLeaseId],
-            NotificationService::dispatchPlanSummary($plans),
+            fn ($plan): array => $this->claimSummary($plan, $claimLeaseId),
+            $plans,
         );
     }
 
@@ -278,6 +279,49 @@ final class NotificationDispatchPlanService
         }
 
         return NotificationService::dispatchPlanSummary($plans);
+    }
+
+    /** @return array<string, mixed> */
+    private function claimSummary(NotificationDispatchPlanEntity $plan, string $claimLeaseId): array
+    {
+        $summary = NotificationService::dispatchPlanSummary([$plan])[0] ?? [];
+        $summary['claimLeaseId'] = $claimLeaseId;
+
+        if ('push' !== $plan->channel()->value) {
+            return $summary;
+        }
+
+        $target = (string) $plan->target();
+        if (!str_starts_with($target, 'subscription:')) {
+            $summary['delivery'] = null;
+
+            return $summary;
+        }
+
+        $tokenHash = substr($target, strlen('subscription:'));
+        $subscription = $this->subscriptionRepository->findByTokenHash($tokenHash);
+        $now = new \DateTimeImmutable();
+        if (null === $subscription || !$subscription->enabled() || ($subscription->expiresAt() instanceof \DateTimeImmutable && $subscription->expiresAt() <= $now)) {
+            $summary['delivery'] = null;
+
+            return $summary;
+        }
+
+        $notification = $plan->notification();
+        $summary['delivery'] = [
+            'provider' => $subscription->platform(),
+            'token' => $subscription->token(),
+            'appKey' => $subscription->appKey(),
+            'deviceId' => $subscription->deviceId(),
+            'title' => $notification->title(),
+            'body' => $notification->body(),
+            'priority' => $notification->priority()->value,
+            'actionUrl' => $notification->actionUrl(),
+            'payload' => $notification->payload(),
+            'correlationId' => $notification->correlationId() ?? $plan->id(),
+        ];
+
+        return $summary;
     }
 
     /**

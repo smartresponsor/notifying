@@ -119,6 +119,11 @@ class NotificationSubscriptionEntity implements ObjectIdentifiedInterface, Objec
         return $this->deviceId;
     }
 
+    public function token(): string
+    {
+        return $this->token;
+    }
+
     public function tokenHash(): string
     {
         return $this->tokenHash;

@@ -342,7 +342,7 @@ final class NotificationDispatchPlanService
         $notification = $plan->notification();
         $summary['delivery'] = [
             'provider' => $subscription->platform(),
-            'token' => $subscription->token(),
+            'tokenHash' => $subscription->tokenHash(),
             'appKey' => $subscription->appKey(),
             'deviceId' => $subscription->deviceId(),
             'title' => $notification->title(),

@@ -109,6 +109,22 @@ final class NotificationSubscriptionService
         ];
     }
 
+    public function resolveActiveToken(string $tokenHash, string $platform, string $appKey): ?string
+    {
+        $subscription = $this->subscriptionRepository->findByTokenHash(trim($tokenHash));
+        if (!$subscription instanceof NotificationSubscriptionEntity || !$subscription->enabled()) {
+            return null;
+        }
+        if ($subscription->platform() !== $platform || $subscription->appKey() !== $appKey) {
+            return null;
+        }
+        if ($subscription->expiresAt() instanceof \DateTimeImmutable && $subscription->expiresAt() <= new \DateTimeImmutable()) {
+            return null;
+        }
+
+        return $subscription->token();
+    }
+
     /** @return array{disabled: bool, subscription: array<string, mixed>|null, suppressedDispatchPlans: list<array<string, mixed>>} */
     public function disableInvalidSubscription(string $tokenHash, string $reasonCode, ?string $modifiedBy = null): array
     {

@@ -77,6 +77,33 @@ final class NotificationSubscriptionReconciliationTest extends KernelTestCase
         self::assertNotContains($pushPlanId, $claimedIds);
     }
 
+    public function testClaimExposesOnlyTokenHashForPushDelivery(): void
+    {
+        $notificationService = self::getContainer()->get(NotificationService::class);
+        $subscriptionService = self::getContainer()->get(NotificationSubscriptionService::class);
+        $dispatchPlanService = self::getContainer()->get(NotificationDispatchPlanService::class);
+        self::assertInstanceOf(NotificationService::class, $notificationService);
+        self::assertInstanceOf(NotificationSubscriptionService::class, $subscriptionService);
+        self::assertInstanceOf(NotificationDispatchPlanService::class, $dispatchPlanService);
+
+        $notificationService->ingest($this->intentPayload('claim-token-hash'));
+        $subscription = $subscriptionService->registerSubscription($this->subscriptionPayload('claim-token-hash'));
+        $claimed = $dispatchPlanService->claim('test-worker-secret-safe', limit: 100, leaseSeconds: 60);
+        $pushClaim = null;
+        foreach ($claimed as $claim) {
+            if ('push' === ($claim['channel'] ?? null)) {
+                $pushClaim = $claim;
+                break;
+            }
+        }
+
+        self::assertIsArray($pushClaim);
+        self::assertIsArray($pushClaim['delivery'] ?? null);
+        self::assertSame($subscription['tokenHash'], $pushClaim['delivery']['tokenHash'] ?? null);
+        self::assertArrayNotHasKey('token', $pushClaim['delivery']);
+        self::assertStringNotContainsString('token-claim-token-hash', json_encode($pushClaim, JSON_THROW_ON_ERROR));
+    }
+
     public function testRegistrationKeepsPushSuppressedWhenPreferenceDisablesPush(): void
     {
         $notificationService = self::getContainer()->get(NotificationService::class);

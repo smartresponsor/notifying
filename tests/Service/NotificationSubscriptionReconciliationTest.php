@@ -110,6 +110,39 @@ final class NotificationSubscriptionReconciliationTest extends KernelTestCase
         self::assertNull($plan->target());
     }
 
+    public function testProviderInvalidationDisablesSubscriptionAndSuppressesPendingPush(): void
+    {
+        $notificationService = self::getContainer()->get(NotificationService::class);
+        $subscriptionService = self::getContainer()->get(NotificationSubscriptionService::class);
+        $repository = self::getContainer()->get(NotificationDispatchPlanRepository::class);
+        self::assertInstanceOf(NotificationService::class, $notificationService);
+        self::assertInstanceOf(NotificationSubscriptionService::class, $subscriptionService);
+        self::assertInstanceOf(NotificationDispatchPlanRepository::class, $repository);
+
+        $created = $notificationService->ingest($this->intentPayload('invalid-token'));
+        $pushPlan = $this->channelPlan($created, 'push');
+        $pushPlanId = (string) $pushPlan['id'];
+        $subscription = $subscriptionService->registerSubscription($this->subscriptionPayload('invalid-token'));
+        $tokenHash = (string) $subscription['tokenHash'];
+
+        $result = $subscriptionService->disableInvalidSubscription(
+            tokenHash: $tokenHash,
+            reasonCode: 'UNREGISTERED',
+            modifiedBy: 'test-provider-feedback',
+        );
+
+        self::assertTrue($result['disabled']);
+        self::assertFalse($result['subscription']['enabled']);
+        self::assertCount(1, $result['suppressedDispatchPlans']);
+        self::assertSame($pushPlanId, $result['suppressedDispatchPlans'][0]['id']);
+        self::assertSame('no-active-push-subscription', $result['suppressedDispatchPlans'][0]['reason']);
+
+        $plan = $repository->find($pushPlanId);
+        self::assertInstanceOf(NotificationDispatchPlanEntity::class, $plan);
+        self::assertSame(NotificationDispatchStatus::Suppressed, $plan->status());
+        self::assertSame('no-active-push-subscription', $plan->reason());
+    }
+
     /** @return array<string, mixed> */
     private function intentPayload(string $suffix): array
     {

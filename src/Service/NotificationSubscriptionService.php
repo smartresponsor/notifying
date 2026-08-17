@@ -109,6 +109,44 @@ final class NotificationSubscriptionService
         ];
     }
 
+    /** @return array{disabled: bool, subscription: array<string, mixed>|null, suppressedDispatchPlans: list<array<string, mixed>>} */
+    public function disableInvalidSubscription(string $tokenHash, string $reasonCode, ?string $modifiedBy = null): array
+    {
+        $tokenHash = trim($tokenHash);
+        $reasonCode = trim($reasonCode);
+        if ('' === $tokenHash || '' === $reasonCode) {
+            throw new \InvalidArgumentException('tokenHash and reasonCode are required.');
+        }
+
+        $subscription = $this->subscriptionRepository->findByTokenHash($tokenHash);
+        if (!$subscription instanceof NotificationSubscriptionEntity) {
+            return [
+                'disabled' => false,
+                'subscription' => null,
+                'suppressedDispatchPlans' => [],
+            ];
+        }
+
+        if ($subscription->enabled()) {
+            $subscription->disable($modifiedBy);
+            $this->entityManager->flush();
+        }
+
+        $suppressedDispatchPlans = $this->dispatchPlanService->suppressPushForInvalidSubscription(
+            recipientType: $subscription->recipientType(),
+            recipientKey: $subscription->recipientKey(),
+            tokenHash: $subscription->tokenHash(),
+            reasonCode: $reasonCode,
+            modifiedBy: $modifiedBy,
+        );
+
+        return [
+            'disabled' => true,
+            'subscription' => self::subscriptionSummary($subscription),
+            'suppressedDispatchPlans' => $suppressedDispatchPlans,
+        ];
+    }
+
     /**
      * @param array<string, mixed> $payload
      * @return array<string, mixed>

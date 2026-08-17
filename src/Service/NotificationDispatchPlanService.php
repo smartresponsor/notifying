@@ -144,6 +144,38 @@ final class NotificationDispatchPlanService
     /**
      * @return list<array<string, mixed>>
      */
+    public function suppressPushForInvalidSubscription(RecipientType $recipientType, string $recipientKey, string $tokenHash, string $reasonCode, ?string $modifiedBy = null): array
+    {
+        if ('' === $recipientKey || '' === $tokenHash || '' === trim($reasonCode)) {
+            return [];
+        }
+
+        $plans = $this->dispatchPlanRepository->listHandoffReadyPushForRecipientTarget(
+            $recipientType,
+            $recipientKey,
+            'subscription:'.$tokenHash,
+        );
+        foreach ($plans as $plan) {
+            $plan->suppress(
+                reason: 'no-active-push-subscription',
+                metadata: [
+                    'suppressedBy' => 'delivering-invalid-subscription',
+                    'providerReasonCode' => $reasonCode,
+                ],
+                modifiedBy: $modifiedBy,
+            );
+        }
+
+        if ([] !== $plans) {
+            $this->entityManager->flush();
+        }
+
+        return NotificationService::dispatchPlanSummary($plans);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
     public function suppressPushForPreference(RecipientType $recipientType, string $recipientKey, string $topic, string $reason, ?string $modifiedBy = null): array
     {
         if ('' === $recipientKey || '' === $topic || '' === trim($reason)) {

@@ -41,9 +41,6 @@ class NotificationEntity implements ObjectIdentifiedInterface, ObjectAuditedInte
     #[ORM\Column(length: 120)]
     private string $topic;
 
-    #[ORM\Column(length: 200)]
-    private string $title;
-
     #[ORM\Column(type: Types::TEXT)]
     private string $body;
 
@@ -83,7 +80,6 @@ class NotificationEntity implements ObjectIdentifiedInterface, ObjectAuditedInte
         $this->sourceComponent = $sourceComponent;
         $this->eventName = $eventName;
         $this->topic = $topic;
-        $this->title = $title;
         $this->body = $body;
         $this->initializeObjectIdentity(objectUuid: $id);
         $this->initializeObjectAudit(createdBy: $createdBy);
@@ -112,7 +108,7 @@ class NotificationEntity implements ObjectIdentifiedInterface, ObjectAuditedInte
 
     public function title(): string
     {
-        return $this->title;
+        return $this->getFirstTitle() ?? '';
     }
 
     public function body(): string

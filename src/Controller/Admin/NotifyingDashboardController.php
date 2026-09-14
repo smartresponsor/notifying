@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace App\Notifying\Controller\Admin;
 
-use App\Notifying\Entity\NotificationDispatchPlanEntity;
-use App\Notifying\Entity\NotificationEntity;
-use App\Notifying\Entity\NotificationPreferenceEntity;
-use App\Notifying\Entity\NotificationRecipientEntity;
-use App\Notifying\Entity\NotificationSubscriptionEntity;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminDashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
@@ -32,10 +27,10 @@ final class NotifyingDashboardController extends AbstractDashboardController
     {
         yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home');
         yield MenuItem::section('Notification center');
-        yield MenuItem::linkToCrud('Notifications', 'fa fa-bell', NotificationEntity::class);
-        yield MenuItem::linkToCrud('Recipients', 'fa fa-users', NotificationRecipientEntity::class);
-        yield MenuItem::linkToCrud('Dispatch Plans', 'fa fa-route', NotificationDispatchPlanEntity::class);
-        yield MenuItem::linkToCrud('Preferences', 'fa fa-sliders', NotificationPreferenceEntity::class);
-        yield MenuItem::linkToCrud('Subscriptions', 'fa fa-mobile-screen', NotificationSubscriptionEntity::class);
+        yield MenuItem::linkTo(NotificationCrudController::class, 'Notifications', 'fa fa-bell');
+        yield MenuItem::linkTo(NotificationRecipientCrudController::class, 'Recipients', 'fa fa-users');
+        yield MenuItem::linkTo(NotificationDispatchPlanCrudController::class, 'Dispatch Plans', 'fa fa-route');
+        yield MenuItem::linkTo(NotificationPreferenceCrudController::class, 'Preferences', 'fa fa-sliders');
+        yield MenuItem::linkTo(NotificationSubscriptionCrudController::class, 'Subscriptions', 'fa fa-mobile-screen');
     }
 }

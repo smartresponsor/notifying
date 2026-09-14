@@ -20,7 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: NotificationDispatchPlanRepository::class)]
 #[ORM\Table(name: 'notifying_notification_dispatch_plan')]
 #[ORM\UniqueConstraint(name: 'uniq_notifying_dispatch_recipient_channel', columns: ['recipient_entry_id', 'channel'])]
-#[ORM\Index(name: 'idx_notifying_dispatch_recipient_status', columns: ['recipient_key', 'status', 'object_created_at'])]
+#[ORM\Index(name: 'idx_notifying_dispatch_recipient_status', columns: ['recipient_key', 'status', 'created_at'])]
 #[ORM\Index(name: 'idx_notifying_dispatch_notification', columns: ['notification_id'])]
 #[ORM\Index(name: 'idx_notifying_dispatch_recipient_entry', columns: ['recipient_entry_id'])]
 #[ORM\Index(name: 'idx_notifying_dispatch_channel_status', columns: ['channel', 'status'])]

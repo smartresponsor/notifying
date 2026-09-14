@@ -44,7 +44,10 @@ final class NotificationDispatchPlannerService
             createdBy: $createdBy,
         );
 
-        $pushReason = $this->suppressionReason(NotificationChannel::Push, $preference);
+        $deliveryPolicy = (string) ($notification->metadata()['deliveryPolicy'] ?? '');
+        $pushReason = 'inbox_only' === $deliveryPolicy
+            ? 'delivery-policy-inbox-only'
+            : $this->suppressionReason(NotificationChannel::Push, $preference);
         $pushTarget = null;
         $pushScheduledAt = new \DateTimeImmutable();
         $pushDeferred = false;

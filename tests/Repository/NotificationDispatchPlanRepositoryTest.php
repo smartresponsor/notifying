@@ -21,6 +21,12 @@ final class NotificationDispatchPlanRepositoryTest extends KernelTestCase
 
     protected function setUp(): void
     {
+        self::ensureKernelShutdown();
+        $databasePath = dirname(__DIR__, 2).'/var/notifying_test.sqlite';
+        if (is_file($databasePath)) {
+            unlink($databasePath);
+        }
+
         self::bootKernel();
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -30,6 +36,37 @@ final class NotificationDispatchPlanRepositoryTest extends KernelTestCase
         $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
         $schemaTool->dropSchema($metadata);
         $schemaTool->createSchema($metadata);
+    }
+
+    public function testDoctrineSchemaUsesCanonicalObjectingColumns(): void
+    {
+        $schemaTool = new SchemaTool($this->entityManager);
+        $schema = $schemaTool->getSchemaFromMetadata($this->entityManager->getMetadataFactory()->getAllMetadata());
+
+        foreach ([
+            'notifying_notification',
+            'notifying_notification_recipient',
+            'notifying_notification_dispatch_plan',
+            'notifying_notification_preference',
+            'notifying_notification_subscription',
+        ] as $tableName) {
+            $table = $schema->getTable($tableName);
+            foreach (['uuid', 'slug', 'created_at', 'modified_at', 'created_by', 'modified_by'] as $column) {
+                self::assertTrue($table->hasColumn($column), sprintf('%s must expose canonical Objecting column %s.', $tableName, $column));
+            }
+            foreach (['object_uuid', 'object_slug', 'object_created_at', 'object_modified_at', 'object_created_by', 'object_modified_by'] as $legacyColumn) {
+                self::assertFalse($table->hasColumn($legacyColumn), sprintf('%s must not expose legacy column %s.', $tableName, $legacyColumn));
+            }
+        }
+
+        $notification = $schema->getTable('notifying_notification');
+        foreach (['first_title', 'middle_title', 'last_title'] as $column) {
+            self::assertTrue($notification->hasColumn($column));
+        }
+        self::assertFalse($notification->hasColumn('title'), 'Notification title must be an Objecting first_title alias, not duplicate storage.');
+        self::assertFalse($notification->hasColumn('object_first_title'));
+        self::assertFalse($notification->hasColumn('object_middle_title'));
+        self::assertFalse($notification->hasColumn('object_last_title'));
     }
 
     public function testOnlyDueHandoffReadyPlanIsSelected(): void

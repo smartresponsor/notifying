@@ -28,6 +28,10 @@ This stack is consumed as Symfony packages. Notifying still owns its own Entity 
 
 The Objecting consumer declaration lives in `resources/consumer/notifying-object-field-packs.yaml` and records the initial field-pack adoption surface. The mandatory stack summary lives in `resources/consumer/notifying-platform-stack.yaml`. The local Cruding runtime placeholder lives in `config/kernel/runtime_scope.lock.php`.
 
+Notifying treats Objecting field packs as the canonical storage for shared system fields. Notification display `title` is a business alias of Objecting `object_title.firstTitle`; Notifying must not introduce a parallel `title` column. Backend-owned `id` remains separate by Objecting contract, while adopted identity, audit, and title fields come from Objecting embeddables.
+
+The Doctrine entity metadata is the current schema design source of truth. Migrations exist to bring already-deployed databases to that design; they must not preserve a second parallel field model. Schema convergence is fail-fast when legacy and canonical Objecting columns coexist, because production data is not guessed or silently merged.
+
 The host application should mount this repository through a Composer path repository and require `smartresponsor/notifying` when Notifying is promoted into the host runtime.
 
 ## Responsibility boundary
@@ -92,7 +96,7 @@ Preference writes use strict recipient type, channel, and boolean validation. Ti
 
 Notifying persists `NotificationDispatchPlanEntity` records for each notification recipient and channel decision. The dispatch plan is the durable boundary that Delivering can later consume.
 
-The current repository creates inbox and push dispatch plans during intent ingestion. It does not call Symfony Notifier and does not send through providers.
+The current repository creates inbox and push dispatch plans during intent ingestion. It does not call Symfony Notifier and does not send through providers. Intents may set metadata `deliveryPolicy=inbox_only`; in that case the inbox plan remains active while the push plan is explicitly suppressed with reason `delivery-policy-inbox-only`, so the notification never enters Delivering handoff.
 
 When Mobiling registers a push subscription, Notifying reactivates previously suppressed push plans for that recipient if they were suppressed only because no active subscription existed. Reactivated plans move back to `handoff_ready` and become visible through the dispatch-plan API.
 

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Notifying\Tests\Service;
 
+use App\Notifying\Controller\Api\NotificationMutationController;
 use App\Notifying\Entity\NotificationDispatchPlanEntity;
 use App\Notifying\Enum\NotificationDispatchStatus;
 use App\Notifying\Repository\NotificationDispatchPlanRepository;
+use App\Notifying\Repository\NotificationRecipientRepository;
 use App\Notifying\Service\NotificationDispatchPlanService;
 use App\Notifying\Service\NotificationPreferenceService;
 use App\Notifying\Service\NotificationService;
@@ -14,6 +16,7 @@ use App\Notifying\Service\NotificationSubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\HttpFoundation\Request;
 
 final class NotificationSubscriptionReconciliationTest extends KernelTestCase
 {
@@ -21,6 +24,12 @@ final class NotificationSubscriptionReconciliationTest extends KernelTestCase
 
     protected function setUp(): void
     {
+        self::ensureKernelShutdown();
+        $databasePath = dirname(__DIR__, 2).'/var/notifying_test.sqlite';
+        if (is_file($databasePath)) {
+            unlink($databasePath);
+        }
+
         self::bootKernel();
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -135,6 +144,100 @@ final class NotificationSubscriptionReconciliationTest extends KernelTestCase
         self::assertSame(NotificationDispatchStatus::Suppressed, $plan->status());
         self::assertSame('channel-disabled', $plan->reason());
         self::assertNull($plan->target());
+    }
+
+    public function testInboxOnlyDeliveryPolicyNeverCreatesPushHandoff(): void
+    {
+        $notificationService = self::getContainer()->get(NotificationService::class);
+        self::assertInstanceOf(NotificationService::class, $notificationService);
+
+        $payload = $this->intentPayload('inbox-only');
+        $payload['metadata'] = ['deliveryPolicy' => 'inbox_only'];
+        $created = $notificationService->ingest($payload);
+
+        $inboxPlan = $this->channelPlan($created, 'inbox');
+        $pushPlan = $this->channelPlan($created, 'push');
+        self::assertSame('planned', $inboxPlan['status']);
+        self::assertSame('inbox-entry-created', $inboxPlan['reason']);
+        self::assertSame('suppressed', $pushPlan['status']);
+        self::assertSame('delivery-policy-inbox-only', $pushPlan['reason']);
+        self::assertNull($pushPlan['target']);
+    }
+
+    public function testCallMeCreatesOneOperationalIntentAndAcknowledgesOriginatingNeed(): void
+    {
+        $notificationService = self::getContainer()->get(NotificationService::class);
+        $controller = self::getContainer()->get(NotificationMutationController::class);
+        $recipientRepository = self::getContainer()->get(NotificationRecipientRepository::class);
+        self::assertInstanceOf(NotificationService::class, $notificationService);
+        self::assertInstanceOf(NotificationMutationController::class, $controller);
+        self::assertInstanceOf(NotificationRecipientRepository::class, $recipientRepository);
+
+        $created = $notificationService->ingest([
+            'sourceComponent' => 'one_tasker_ai',
+            'eventName' => 'need.recognized',
+            'topic' => 'one_tasker.need',
+            'recipientType' => 'user',
+            'recipientKey' => 'test-user-callback',
+            'title' => 'Kitchen faucet is leaking',
+            'body' => 'Kitchen faucet is leaking',
+            'priority' => 'normal',
+            'payload' => ['category' => 'plumbing'],
+            'metadata' => ['deliveryPolicy' => 'inbox_only'],
+            'correlationId' => 'recognized-need-callback-test',
+        ]);
+        $entryId = (string) $created['recipientEntryId'];
+
+        $request = Request::create(
+            '/api/notification/need/callback',
+            'POST',
+            server: [
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_X_NOTIFYING_RECIPIENT_KEY' => 'test-user-callback',
+            ],
+            content: json_encode(['recipientEntryId' => $entryId], JSON_THROW_ON_ERROR),
+        );
+
+        $first = json_decode($controller->requestNeedCallback($request)->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        $second = json_decode($controller->requestNeedCallback($request)->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertTrue($first['ok']);
+        self::assertTrue($second['ok']);
+        self::assertSame($first['callback']['notificationId'], $second['callback']['notificationId']);
+        self::assertTrue($first['callback']['created']);
+        self::assertFalse($second['callback']['created']);
+        self::assertSame('one_tasker.need.callback', $first['callback']['topic']);
+
+        $entry = $recipientRepository->find($entryId);
+        self::assertNotNull($entry);
+        self::assertSame('acked', $entry->status()->value);
+        self::assertNotNull($entry->ackedAt());
+    }
+
+    public function testMalformedSnoozeUntilReturnsBadRequest(): void
+    {
+        $controller = self::getContainer()->get(NotificationMutationController::class);
+        self::assertInstanceOf(NotificationMutationController::class, $controller);
+
+        $request = Request::create(
+            '/api/notification/snooze',
+            'POST',
+            server: [
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_X_NOTIFYING_RECIPIENT_KEY' => 'test-user-snooze',
+            ],
+            content: json_encode([
+                'recipientEntryId' => 'missing-entry',
+                'until' => 'not-a-date',
+            ], JSON_THROW_ON_ERROR),
+        );
+
+        $response = $controller->snooze($request);
+        $payload = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame(400, $response->getStatusCode());
+        self::assertFalse($payload['ok']);
+        self::assertSame('Invalid snooze until value.', $payload['error']);
     }
 
     public function testProviderInvalidationDisablesSubscriptionAndSuppressesPendingPush(): void

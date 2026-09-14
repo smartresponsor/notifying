@@ -199,14 +199,14 @@ class NotificationPreferenceEntity implements ObjectIdentifiedInterface, ObjectA
     /** @param list<NotificationChannel> $channels */
     public function setEnabledChannels(array $channels, ?string $modifiedBy = null): void
     {
-        $this->enabledChannels = array_values(array_map(static fn (NotificationChannel $channel): string => $channel->value, $channels));
+        $this->enabledChannels = array_map(static fn (NotificationChannel $channel): string => $channel->value, $channels);
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 
     /** @param list<NotificationChannel> $channels */
     public function setDisabledChannels(array $channels, ?string $modifiedBy = null): void
     {
-        $this->disabledChannels = array_values(array_map(static fn (NotificationChannel $channel): string => $channel->value, $channels));
+        $this->disabledChannels = array_map(static fn (NotificationChannel $channel): string => $channel->value, $channels);
         $this->touchModified(modifiedBy: $modifiedBy);
     }
 

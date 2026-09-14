@@ -1,0 +1,45 @@
+{
+  "name": "smartresponsor/notifying",
+  "description": "Smart Responsor Notifying platform component: notification center, inbox, preferences, subscriptions, and delivery planning.",
+  "type": "symfony-bundle",
+  "license": "proprietary",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "require": {
+    "php": "^8.4",
+    "collectioning/collection": "dev-master",
+    "cruding/crud": "dev-master",
+    "ext-json": "*",
+    "doctrine/dbal": "^4.2",
+    "doctrine/doctrine-bundle": "^3.2",
+    "doctrine/doctrine-migrations-bundle": "^4.0",
+    "doctrine/orm": "^3.3",
+    "easycorp/easyadmin-bundle": "^5.0",
+    "interfacing/interface": "dev-master",
+    "objecting/object": "dev-master",
+    "symfony/asset": "^8.1",
+    "symfony/console": "^8.1",
+    "symfony/dotenv": "^8.1",
+    "symfony/form": "^8.1",
+    "symfony/framework-bundle": "^8.1",
+    "symfony/runtime": "^8.1",
+    "symfony/security-bundle": "^8.1",
+    "symfony/serializer": "^8.1",
+    "symfony/twig-bundle": "^8.1",
+    "symfony/validator": "^8.1",
+    "symfony/yaml": "^8.1",
+    "tabling/table": "dev-master",
+    "twig/twig": "^3.27",
+    "viewing/view": "dev-master"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\Notifying\\": "src/"
+    }
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  },
+  "extra": {
+    "symfony": {"require": "^8.1"}

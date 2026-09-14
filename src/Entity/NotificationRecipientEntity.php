@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: NotificationRecipientRepository::class)]
 #[ORM\Table(name: 'notifying_notification_recipient')]
-#[ORM\Index(name: 'idx_notifying_recipient_inbox', columns: ['recipient_key', 'status', 'object_created_at'])]
+#[ORM\Index(name: 'idx_notifying_recipient_inbox', columns: ['recipient_key', 'status', 'created_at'])]
 #[ORM\Index(name: 'idx_notifying_recipient_notification', columns: ['notification_id'])]
 #[ORM\Index(name: 'idx_notifying_recipient_snoozed', columns: ['snoozed_until'])]
 class NotificationRecipientEntity implements ObjectIdentifiedInterface, ObjectAuditedInterface

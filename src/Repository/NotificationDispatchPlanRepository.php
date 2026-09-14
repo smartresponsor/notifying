@@ -39,7 +39,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
             ->andWhere('dispatchPlan.status IN (:statuses)')
             ->setParameter('statuses', [NotificationDispatchStatus::Planned, NotificationDispatchStatus::HandoffReady])
             ->orderBy('dispatchPlan.scheduledAt', 'ASC')
-            ->addOrderBy('dispatchPlan.objectAudit.objectCreatedAt', 'ASC')
+            ->addOrderBy('dispatchPlan.objectAudit.createdAt', 'ASC')
             ->setMaxResults(max(1, min(500, $limit)))
             ->getQuery()
             ->getResult();
@@ -56,7 +56,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
         $limit = max(1, min(500, $limit));
         $connection = $this->getEntityManager()->getConnection();
         $connection->executeStatement(
-            'UPDATE notifying_notification_dispatch_plan SET status = :ready, claimed_by = NULL, claimed_at = NULL, claim_expires_at = NULL, claim_lease_hash = NULL, object_modified_at = :modifiedAt, object_modified_by = :modifiedBy WHERE status = :claimed AND claim_expires_at IS NOT NULL AND claim_expires_at <= :now',
+            'UPDATE notifying_notification_dispatch_plan SET status = :ready, claimed_by = NULL, claimed_at = NULL, claim_expires_at = NULL, claim_lease_hash = NULL, modified_at = :modifiedAt, modified_by = :modifiedBy WHERE status = :claimed AND claim_expires_at IS NOT NULL AND claim_expires_at <= :now',
             [
                 'ready' => NotificationDispatchStatus::HandoffReady->value,
                 'modifiedAt' => $claimedAt->format('Y-m-d H:i:s'),
@@ -73,7 +73,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
             ->setParameter('status', NotificationDispatchStatus::HandoffReady)
             ->setParameter('claimedAt', $claimedAt)
             ->orderBy('dispatchPlan.scheduledAt', 'ASC')
-            ->addOrderBy('dispatchPlan.objectAudit.objectCreatedAt', 'ASC')
+            ->addOrderBy('dispatchPlan.objectAudit.createdAt', 'ASC')
             ->setMaxResults($limit * 2)
             ->getQuery()
             ->getArrayResult();
@@ -91,7 +91,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
             }
 
             $updated = $connection->executeStatement(
-                'UPDATE notifying_notification_dispatch_plan SET status = :claimed, claimed_by = :claimedBy, claimed_at = :claimedAt, claim_expires_at = :claimExpiresAt, claim_lease_hash = :claimLeaseHash, object_modified_at = :modifiedAt, object_modified_by = :modifiedBy WHERE id = :id AND status = :ready AND (scheduled_at IS NULL OR scheduled_at <= :claimedAt)',
+                'UPDATE notifying_notification_dispatch_plan SET status = :claimed, claimed_by = :claimedBy, claimed_at = :claimedAt, claim_expires_at = :claimExpiresAt, claim_lease_hash = :claimLeaseHash, modified_at = :modifiedAt, modified_by = :modifiedBy WHERE id = :id AND status = :ready AND (scheduled_at IS NULL OR scheduled_at <= :claimedAt)',
                 [
                     'claimed' => NotificationDispatchStatus::Claimed->value,
                     'claimedBy' => $claimedBy,
@@ -143,7 +143,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('dispatchPlan')
             ->andWhere('dispatchPlan.id IN (:ids)')
             ->setParameter('ids', $ids)
-            ->orderBy('dispatchPlan.objectAudit.objectCreatedAt', 'ASC')
+            ->orderBy('dispatchPlan.objectAudit.createdAt', 'ASC')
             ->getQuery()
             ->getResult();
     }

@@ -64,6 +64,20 @@ final class NotificationInboxService
         return $updated;
     }
 
+    public function findOwnedEntry(string $recipientEntryId, string $recipientKey): ?NotificationRecipientEntity
+    {
+        if ('' === $recipientEntryId || '' === $recipientKey) {
+            return null;
+        }
+
+        $entry = $this->recipientRepository->find($recipientEntryId);
+        if (!$entry instanceof NotificationRecipientEntity || $entry->recipientKey() !== $recipientKey) {
+            return null;
+        }
+
+        return $entry;
+    }
+
     public function ack(string $recipientEntryId, string $recipientKey, ?string $modifiedBy = null): bool
     {
         if ('' === $recipientEntryId) {

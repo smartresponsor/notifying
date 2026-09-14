@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifying\Service;
 
-use App\Notifying\Entity\NotificationEntity;
 use App\Notifying\Entity\NotificationDispatchPlanEntity;
+use App\Notifying\Entity\NotificationEntity;
 use App\Notifying\Entity\NotificationRecipientEntity;
 use App\Notifying\Enum\NotificationPriority;
 use App\Notifying\Enum\RecipientType;

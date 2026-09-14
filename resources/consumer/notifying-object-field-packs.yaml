@@ -30,3 +30,13 @@ entities:
       - object_title
   App\Notifying\Entity\NotificationSubscriptionEntity:
     table: notifying_notification_subscription
+    effective_packs:
+      - object_identity
+      - object_audit
+      - object_title
+  App\Notifying\Entity\NotificationDispatchPlanEntity:
+    table: notifying_notification_dispatch_plan
+    effective_packs:
+      - object_identity
+      - object_audit
+      - object_title

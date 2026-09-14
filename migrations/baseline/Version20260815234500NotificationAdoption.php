@@ -63,7 +63,6 @@ final class Version20260815234500NotificationAdoption extends AbstractMigration
         $notification->addColumn('source_component', Types::STRING, ['length' => 80]);
         $notification->addColumn('event_name', Types::STRING, ['length' => 120]);
         $notification->addColumn('topic', Types::STRING, ['length' => 120]);
-        $notification->addColumn('title', Types::STRING, ['length' => 200]);
         $notification->addColumn('body', Types::TEXT);
         $notification->addColumn('priority', Types::STRING, ['length' => 255]);
         $notification->addColumn('status', Types::STRING, ['length' => 255]);
@@ -76,8 +75,8 @@ final class Version20260815234500NotificationAdoption extends AbstractMigration
         $this->addAuditColumns($notification);
         $this->addTitleColumns($notification);
         $notification->addPrimaryKeyConstraint(PrimaryKeyConstraint::editor()->setUnquotedColumnNames('id')->create());
-        $notification->addUniqueIndex(['object_uuid'], 'UNIQ_9E3FBB5F4C6A6CB5');
-        $notification->addUniqueIndex(['object_slug'], 'UNIQ_9E3FBB5F588A771');
+        $notification->addUniqueIndex(['uuid'], 'UNIQ_9E3FBB5F4C6A6CB5');
+        $notification->addUniqueIndex(['slug'], 'UNIQ_9E3FBB5F588A771');
         $notification->addIndex(['source_component', 'event_name'], 'idx_notifying_notification_source_event');
         $notification->addIndex(['topic'], 'idx_notifying_notification_topic');
         $notification->addIndex(['status'], 'idx_notifying_notification_status');
@@ -97,9 +96,9 @@ final class Version20260815234500NotificationAdoption extends AbstractMigration
         $this->addIdentityColumns($recipient);
         $this->addAuditColumns($recipient);
         $recipient->addPrimaryKeyConstraint(PrimaryKeyConstraint::editor()->setUnquotedColumnNames('id')->create());
-        $recipient->addUniqueIndex(['object_uuid'], 'UNIQ_44AC95614C6A6CB5');
-        $recipient->addUniqueIndex(['object_slug'], 'UNIQ_44AC9561588A771');
-        $recipient->addIndex(['recipient_key', 'status', 'object_created_at'], 'idx_notifying_recipient_inbox');
+        $recipient->addUniqueIndex(['uuid'], 'UNIQ_44AC95614C6A6CB5');
+        $recipient->addUniqueIndex(['slug'], 'UNIQ_44AC9561588A771');
+        $recipient->addIndex(['recipient_key', 'status', 'created_at'], 'idx_notifying_recipient_inbox');
         $recipient->addIndex(['notification_id'], 'idx_notifying_recipient_notification');
         $recipient->addIndex(['snoozed_until'], 'idx_notifying_recipient_snoozed');
         $recipient->addForeignKeyConstraint('notifying_notification', ['notification_id'], ['id'], ['onDelete' => 'CASCADE'], 'fk_notifying_recipient_notification');
@@ -128,10 +127,10 @@ final class Version20260815234500NotificationAdoption extends AbstractMigration
         $this->addAuditColumns($dispatch);
         $this->addTitleColumns($dispatch);
         $dispatch->addPrimaryKeyConstraint(PrimaryKeyConstraint::editor()->setUnquotedColumnNames('id')->create());
-        $dispatch->addUniqueIndex(['object_uuid'], 'UNIQ_ED2327F94C6A6CB5');
-        $dispatch->addUniqueIndex(['object_slug'], 'UNIQ_ED2327F9588A771');
+        $dispatch->addUniqueIndex(['uuid'], 'UNIQ_ED2327F94C6A6CB5');
+        $dispatch->addUniqueIndex(['slug'], 'UNIQ_ED2327F9588A771');
         $dispatch->addUniqueIndex(['recipient_entry_id', 'channel'], 'uniq_notifying_dispatch_recipient_channel');
-        $dispatch->addIndex(['recipient_key', 'status', 'object_created_at'], 'idx_notifying_dispatch_recipient_status');
+        $dispatch->addIndex(['recipient_key', 'status', 'created_at'], 'idx_notifying_dispatch_recipient_status');
         $dispatch->addIndex(['notification_id'], 'idx_notifying_dispatch_notification');
         $dispatch->addIndex(['recipient_entry_id'], 'idx_notifying_dispatch_recipient_entry');
         $dispatch->addIndex(['channel', 'status'], 'idx_notifying_dispatch_channel_status');
@@ -159,8 +158,8 @@ final class Version20260815234500NotificationAdoption extends AbstractMigration
         $this->addAuditColumns($preference);
         $this->addTitleColumns($preference);
         $preference->addPrimaryKeyConstraint(PrimaryKeyConstraint::editor()->setUnquotedColumnNames('id')->create());
-        $preference->addUniqueIndex(['object_uuid'], 'UNIQ_68F0B0C74C6A6CB5');
-        $preference->addUniqueIndex(['object_slug'], 'UNIQ_68F0B0C7588A771');
+        $preference->addUniqueIndex(['uuid'], 'UNIQ_68F0B0C74C6A6CB5');
+        $preference->addUniqueIndex(['slug'], 'UNIQ_68F0B0C7588A771');
         $preference->addUniqueIndex(['recipient_type', 'recipient_key', 'topic'], 'uniq_notifying_pref_recipient_topic');
         $preference->addIndex(['recipient_key'], 'idx_notifying_pref_recipient');
 
@@ -182,8 +181,8 @@ final class Version20260815234500NotificationAdoption extends AbstractMigration
         $this->addAuditColumns($subscription);
         $this->addTitleColumns($subscription);
         $subscription->addPrimaryKeyConstraint(PrimaryKeyConstraint::editor()->setUnquotedColumnNames('id')->create());
-        $subscription->addUniqueIndex(['object_uuid'], 'UNIQ_B6EB1E544C6A6CB5');
-        $subscription->addUniqueIndex(['object_slug'], 'UNIQ_B6EB1E54588A771');
+        $subscription->addUniqueIndex(['uuid'], 'UNIQ_B6EB1E544C6A6CB5');
+        $subscription->addUniqueIndex(['slug'], 'UNIQ_B6EB1E54588A771');
         $subscription->addUniqueIndex(['token_hash'], 'uniq_notifying_subscription_token_hash');
         $subscription->addUniqueIndex(['recipient_type', 'recipient_key', 'app_key', 'platform', 'device_id'], 'uniq_notifying_subscription_device');
         $subscription->addIndex(['recipient_key', 'enabled'], 'idx_notifying_subscription_recipient');
@@ -231,12 +230,12 @@ final class Version20260815234500NotificationAdoption extends AbstractMigration
 
     private function assertIdentityAndIdShape(Table $table): void
     {
-        foreach (['id', 'object_uuid', 'object_slug', 'object_created_at', 'object_modified_at', 'object_created_by', 'object_modified_by'] as $column) {
+        foreach (['id', 'uuid', 'slug', 'created_at', 'modified_at', 'created_by', 'modified_by'] as $column) {
             $this->abortIf(!$table->hasColumn($column), sprintf('Existing table %s is missing required Objecting column %s.', $table->getName(), $column));
         }
         $this->abortIf(!$table->getColumn('id')->getType() instanceof GuidType, sprintf('Existing table %s id must be GUID/UUID.', $table->getName()));
-        $this->abortIf(!$table->getColumn('object_uuid')->getType() instanceof BinaryType || 16 !== $table->getColumn('object_uuid')->getLength(), sprintf('Existing table %s object_uuid must be fixed binary(16).', $table->getName()));
-        $this->abortIf(!$table->getColumn('object_slug')->getType() instanceof StringType || 190 !== $table->getColumn('object_slug')->getLength(), sprintf('Existing table %s object_slug must be varchar(190).', $table->getName()));
+        $this->abortIf(!$table->getColumn('uuid')->getType() instanceof BinaryType || 16 !== $table->getColumn('uuid')->getLength(), sprintf('Existing table %s uuid must be fixed binary(16).', $table->getName()));
+        $this->abortIf(!$table->getColumn('slug')->getType() instanceof StringType || 190 !== $table->getColumn('slug')->getLength(), sprintf('Existing table %s slug must be varchar(190).', $table->getName()));
     }
 
     private function ensureNullableColumn(Table $table, string $name, string $type, ?int $length = null): void
@@ -271,22 +270,22 @@ final class Version20260815234500NotificationAdoption extends AbstractMigration
 
     private function addIdentityColumns(Table $table): void
     {
-        $table->addColumn('object_uuid', Types::BINARY, ['length' => 16, 'fixed' => true]);
-        $table->addColumn('object_slug', Types::STRING, ['length' => 190]);
+        $table->addColumn('uuid', Types::BINARY, ['length' => 16, 'fixed' => true]);
+        $table->addColumn('slug', Types::STRING, ['length' => 190]);
     }
 
     private function addAuditColumns(Table $table): void
     {
-        $table->addColumn('object_created_at', Types::DATETIME_IMMUTABLE);
-        $table->addColumn('object_modified_at', Types::DATETIME_IMMUTABLE, ['notnull' => false]);
-        $table->addColumn('object_created_by', Types::STRING, ['length' => 190, 'notnull' => false]);
-        $table->addColumn('object_modified_by', Types::STRING, ['length' => 190, 'notnull' => false]);
+        $table->addColumn('created_at', Types::DATETIME_IMMUTABLE);
+        $table->addColumn('modified_at', Types::DATETIME_IMMUTABLE, ['notnull' => false]);
+        $table->addColumn('created_by', Types::STRING, ['length' => 190, 'notnull' => false]);
+        $table->addColumn('modified_by', Types::STRING, ['length' => 190, 'notnull' => false]);
     }
 
     private function addTitleColumns(Table $table): void
     {
-        $table->addColumn('object_first_title', Types::STRING, ['length' => 255, 'notnull' => false]);
-        $table->addColumn('object_middle_title', Types::TEXT, ['notnull' => false]);
-        $table->addColumn('object_last_title', Types::TEXT, ['notnull' => false]);
+        $table->addColumn('first_title', Types::STRING, ['length' => 255, 'notnull' => false]);
+        $table->addColumn('middle_title', Types::TEXT, ['notnull' => false]);
+        $table->addColumn('last_title', Types::TEXT, ['notnull' => false]);
     }
 }

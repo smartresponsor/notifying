@@ -87,3 +87,10 @@
 - RC-critical correction: current Gating requires normal components to own zero generic CRUD controllers/routes, superseding the older journal interpretation of an EasyAdmin exception. Remove the five local *CrudController classes and dashboard bindings; retain Cruding entity aliases.
 - Growth remains separate: richer UX, diagnostics/metrics, digest controls, rate limiting and additional policy capabilities are post-RC unless required by correctness.
 - Pre-change gates: PHP-CS-Fixer PASS; PHPStan PASS. PHPUnit/schema-parity exceed the current Console MCP 30-second ceiling, so timeout is incomplete evidence rather than a product failure.
+
+### Test database isolation repair
+
+- Root cause of the intermittent PHPUnit/schema-parity failures was shared file-backed SQLite state: kernel tests deleted `var/notifying_test.sqlite` while stale/overlapping PHP processes could still hold the file on Windows.
+- PHPUnit now forces `DATABASE_URL=sqlite:///:memory:` and no longer deletes the file-backed schema-parity database from test setup.
+- Console `--env=test` keeps an explicit file-backed fallback via `notifying_test_database_url`, so migration/schema parity remains an independent persistence check.
+- Verification after repair: container lint PASS; PHP-CS-Fixer PASS; PHPStan PASS; PHPUnit PASS (16 tests, 164 assertions); schema parity PASS (5 migrations, 113 SQL queries; mapping/schema sync and migrations up-to-date).

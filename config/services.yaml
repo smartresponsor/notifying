@@ -1,5 +1,6 @@
 parameters:
   notifying_database_url: 'sqlite:///%kernel.project_dir%/var/notifying_dev.sqlite'
+  notifying_test_database_url: 'sqlite:///%kernel.project_dir%/var/notifying_test.sqlite'
 
 services:
   _defaults:

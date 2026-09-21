@@ -3,6 +3,7 @@
   <php>
     <env name="APP_ENV" value="test" force="true"/>
     <env name="KERNEL_CLASS" value="App\Notifying\Kernel"/>
+    <env name="DATABASE_URL" value="sqlite:///:memory:" force="true"/>
   </php>
 
   <source>

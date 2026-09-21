@@ -25,11 +25,6 @@ final class NotificationSubscriptionReconciliationTest extends KernelTestCase
     protected function setUp(): void
     {
         self::ensureKernelShutdown();
-        $databasePath = dirname(__DIR__, 2).'/var/notifying_test.sqlite';
-        if (is_file($databasePath)) {
-            unlink($databasePath);
-        }
-
         self::bootKernel();
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);

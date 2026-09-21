@@ -15,7 +15,7 @@ final class NotifyingDashboardController extends AbstractDashboardController
 {
     public function index(): Response
     {
-        return new Response('Notifying back-office is connected. CRUD screens are exposed through the menu.');
+        return new Response('Notifying back-office is connected. Generic entity CRUD is provided by Cruding.');
     }
 
     public function configureDashboard(): Dashboard
@@ -27,10 +27,5 @@ final class NotifyingDashboardController extends AbstractDashboardController
     {
         yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home');
         yield MenuItem::section('Notification center');
-        yield MenuItem::linkTo(NotificationCrudController::class, 'Notifications', 'fa fa-bell');
-        yield MenuItem::linkTo(NotificationRecipientCrudController::class, 'Recipients', 'fa fa-users');
-        yield MenuItem::linkTo(NotificationDispatchPlanCrudController::class, 'Dispatch Plans', 'fa fa-route');
-        yield MenuItem::linkTo(NotificationPreferenceCrudController::class, 'Preferences', 'fa fa-sliders');
-        yield MenuItem::linkTo(NotificationSubscriptionCrudController::class, 'Subscriptions', 'fa fa-mobile-screen');
     }
 }

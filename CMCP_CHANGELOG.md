@@ -77,3 +77,13 @@
 - Canon040 coverage thresholds remain an explicit quality-growth item; the RC suite now produces persistent, reproducible coverage evidence instead of silently lacking the gate.
 - `.gating/` remains pre-existing materialized local tooling and is not promoted into the product change set.
 - Broader preference/workflow granularity, digest/rate-limit expansion, additional delivery providers, and richer realtime inbox UX remain growth work, not RC blockers for the bounded Notifying responsibility.
+
+## 2026-09-20 — Follow-up canonical boundary pass
+
+- Baseline: clean release/notifying-20260817 at a0b9ac07da21c08d24fa6d43bdea0480814743de, synchronized with upstream before this pass.
+- Re-read Notifying contracts and relevant Objecting, Cruding, Viewing, Interfacing, Gating contracts.
+- Normative Canonization consulted: Canon008, Canon011, Canon012, Canon017, Canon018, Canon019, Canon020, Canon025, Canon029, Canon030, Canon038, Canon039.
+- Mapping: explicit dependencies and App\\Notifying\\ remain; role-first Symfony topology remains; provider transport stays in Delivering; Objecting fields remain canonical; Doctrine metadata remains schema truth.
+- RC-critical correction: current Gating requires normal components to own zero generic CRUD controllers/routes, superseding the older journal interpretation of an EasyAdmin exception. Remove the five local *CrudController classes and dashboard bindings; retain Cruding entity aliases.
+- Growth remains separate: richer UX, diagnostics/metrics, digest controls, rate limiting and additional policy capabilities are post-RC unless required by correctness.
+- Pre-change gates: PHP-CS-Fixer PASS; PHPStan PASS. PHPUnit/schema-parity exceed the current Console MCP 30-second ceiling, so timeout is incomplete evidence rather than a product failure.

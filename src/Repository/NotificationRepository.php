@@ -18,6 +18,16 @@ final class NotificationRepository extends ServiceEntityRepository
         parent::__construct($registry, NotificationEntity::class);
     }
 
+    public function persist(NotificationEntity $notification): void
+    {
+        $this->getEntityManager()->persist($notification);
+    }
+
+    public function flush(): void
+    {
+        $this->getEntityManager()->flush();
+    }
+
     public function findByCorrelationId(string $correlationId): ?NotificationEntity
     {
         return $this->findOneBy(['correlationId' => $correlationId]);
@@ -33,7 +43,7 @@ final class NotificationRepository extends ServiceEntityRepository
             ->andWhere('notification.eventName = :eventName')
             ->setParameter('sourceComponent', $sourceComponent)
             ->setParameter('eventName', $eventName)
-            ->orderBy('notification.objectAudit.objectCreatedAt', 'DESC')
+            ->orderBy('notification.objectAudit.createdAt', 'DESC')
             ->setMaxResults(max(1, min(100, $limit)))
             ->getQuery()
             ->getResult();

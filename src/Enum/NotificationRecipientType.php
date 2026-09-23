@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifying\Enum;
 
-enum RecipientType: string
+enum NotificationRecipientType: string
 {
     case User = 'user';
     case Vendor = 'vendor';

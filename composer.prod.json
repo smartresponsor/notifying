@@ -1,10 +1,47 @@
 {
-  "name": "smartresponsor/notifying",
+  "name": "notifying/notification",
   "description": "Smart Responsor Notifying platform component: notification center, inbox, preferences, subscriptions, and delivery planning.",
   "type": "symfony-bundle",
   "license": "proprietary",
   "minimum-stability": "dev",
   "prefer-stable": true,
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "git@github.com:smartresponsor/objecting.git",
+      "no-api": true
+    },
+    {
+      "type": "vcs",
+      "url": "git@github.com:smartresponsor/interfacing.git",
+      "no-api": true
+    },
+    {
+      "type": "vcs",
+      "url": "git@github.com:smartresponsor/viewing.git",
+      "no-api": true
+    },
+    {
+      "type": "vcs",
+      "url": "git@github.com:smartresponsor/cruding.git",
+      "no-api": true
+    },
+    {
+      "type": "vcs",
+      "url": "git@github.com:smartresponsor/collectioning.git",
+      "no-api": true
+    },
+    {
+      "type": "vcs",
+      "url": "git@github.com:smartresponsor/tabling-.git",
+      "no-api": true
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/smartresponsor/gating.git",
+      "no-api": true
+    }
+  ],
   "require": {
     "php": "^8.4",
     "collectioning/collection": "dev-master",
@@ -32,14 +69,69 @@
     "twig/twig": "^3.27",
     "viewing/view": "dev-master"
   },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.95.17",
+    "phpstan/phpstan": "^2.2",
+    "phpstan/phpstan-doctrine": "^2.0",
+    "phpunit/phpunit": "^12.0",
+    "symfony/panther": "^2.4",
+    "symfony/phpunit-bridge": "^8.0",
+    "symfony/test-pack": "^1.2",
+    "gating/gate": "dev-master"
+  },
   "autoload": {
     "psr-4": {
       "App\\Notifying\\": "src/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "App\\Notifying\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit --testdox tests",
+    "test:coverage": [
+      "@php -r \"if (!is_dir('var/coverage')) { mkdir('var/coverage', 0777, true); }\"",
+      "@php -d xdebug.mode=coverage vendor/bin/phpunit --path-coverage --coverage-text=var/coverage/summary.txt"
+    ],
+    "phpstan": "phpstan analyse -c phpstan.neon --memory-limit=1G",
+    "cs:check": "php-cs-fixer fix --dry-run --diff",
+    "cs:fix": "php-cs-fixer fix",
+    "lint:container": "php bin/console lint:container",
+    "lint:yaml": "php bin/console lint:yaml config --parse-tags",
+    "schema:reset:test": "@php -r \"if (is_file('var/notifying_test.sqlite')) { unlink('var/notifying_test.sqlite'); }\"",
+    "schema:migrate:test": "@php bin/console doctrine:migrations:migrate --env=test --no-interaction",
+    "schema:validate": "php bin/console doctrine:schema:validate --env=test",
+    "schema:diff": "php bin/console doctrine:schema:update --dump-sql --env=test",
+    "schema:parity": [
+      "@schema:reset:test",
+      "@schema:migrate:test",
+      "@schema:validate",
+      "@php bin/console doctrine:migrations:up-to-date --env=test"
+    ],
+    "quality": [
+      "@cs:check",
+      "@phpstan",
+      "@test",
+      "@lint:container",
+      "@lint:yaml",
+      "@schema:parity",
+      "@gate"
+    ],
+    "gate": "@php vendor/bin/gating check --target=."
+  },
   "config": {
+    "allow-plugins": {
+      "symfony/flex": true,
+      "symfony/runtime": true
+    },
     "optimize-autoloader": true,
     "sort-packages": true
   },
   "extra": {
-    "symfony": {"require": "^8.1"}
+    "symfony": {
+      "require": "^8.1"
+    }
+  }
+}

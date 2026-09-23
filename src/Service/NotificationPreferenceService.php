@@ -6,16 +6,14 @@ namespace App\Notifying\Service;
 
 use App\Notifying\Entity\NotificationPreferenceEntity;
 use App\Notifying\Enum\NotificationChannel;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use App\Notifying\Repository\NotificationPreferenceRepository;
-use Doctrine\ORM\EntityManagerInterface;
 
 final class NotificationPreferenceService
 {
     public function __construct(
         private readonly NotificationPreferenceRepository $preferenceRepository,
         private readonly NotificationDispatchPlanService $dispatchPlanService,
-        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -26,8 +24,8 @@ final class NotificationPreferenceService
     public function upsertPreference(array $payload, ?string $modifiedBy = null): array
     {
         $recipientTypeValue = (string) ($payload['recipientType'] ?? 'user');
-        $recipientType = RecipientType::tryFrom($recipientTypeValue);
-        if (!$recipientType instanceof RecipientType) {
+        $recipientType = NotificationRecipientType::tryFrom($recipientTypeValue);
+        if (!$recipientType instanceof NotificationRecipientType) {
             throw new \InvalidArgumentException('recipientType is invalid.');
         }
 
@@ -45,7 +43,7 @@ final class NotificationPreferenceService
         $created = false;
         if (!$preference instanceof NotificationPreferenceEntity) {
             $preference = new NotificationPreferenceEntity(self::newUuid(), $recipientType, $recipientKey, $topic, $modifiedBy);
-            $this->entityManager->persist($preference);
+            $this->preferenceRepository->persist($preference);
             $created = true;
         }
 
@@ -83,7 +81,7 @@ final class NotificationPreferenceService
             $preference->setQuietHours($quietHoursStart, $quietHoursEnd, $timezone, $modifiedBy);
         }
 
-        $this->entityManager->flush();
+        $this->preferenceRepository->flush();
 
         $reactivatedDispatchPlans = [];
         $suppressedDispatchPlans = [];

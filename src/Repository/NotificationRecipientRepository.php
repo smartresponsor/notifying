@@ -6,8 +6,8 @@ namespace App\Notifying\Repository;
 
 use App\Notifying\Entity\NotificationEntity;
 use App\Notifying\Entity\NotificationRecipientEntity;
+use App\Notifying\Enum\NotificationRecipientType;
 use App\Notifying\Enum\NotificationStatus;
-use App\Notifying\Enum\RecipientType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -21,7 +21,17 @@ final class NotificationRecipientRepository extends ServiceEntityRepository
         parent::__construct($registry, NotificationRecipientEntity::class);
     }
 
-    public function findForNotification(NotificationEntity $notification, RecipientType $recipientType, string $recipientKey): ?NotificationRecipientEntity
+    public function persist(NotificationRecipientEntity $recipient): void
+    {
+        $this->getEntityManager()->persist($recipient);
+    }
+
+    public function flush(): void
+    {
+        $this->getEntityManager()->flush();
+    }
+
+    public function findForNotification(NotificationEntity $notification, NotificationRecipientType $recipientType, string $recipientKey): ?NotificationRecipientEntity
     {
         return $this->createQueryBuilder('recipient')
             ->andWhere('recipient.notification = :notification')
@@ -47,7 +57,7 @@ final class NotificationRecipientRepository extends ServiceEntityRepository
             ->andWhere('recipient.status <> :archived')
             ->setParameter('recipientKey', $recipientKey)
             ->setParameter('archived', NotificationStatus::Archived)
-            ->orderBy('recipient.objectAudit.objectCreatedAt', 'DESC')
+            ->orderBy('recipient.objectAudit.createdAt', 'DESC')
             ->setFirstResult(max(0, $offset))
             ->setMaxResults(max(1, min(100, $limit)))
             ->getQuery()

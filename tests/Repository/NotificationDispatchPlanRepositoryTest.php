@@ -9,7 +9,7 @@ use App\Notifying\Entity\NotificationEntity;
 use App\Notifying\Entity\NotificationRecipientEntity;
 use App\Notifying\Enum\NotificationChannel;
 use App\Notifying\Enum\NotificationDispatchStatus;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use App\Notifying\Repository\NotificationDispatchPlanRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -52,6 +52,9 @@ final class NotificationDispatchPlanRepositoryTest extends KernelTestCase
             foreach (['object_uuid', 'object_slug', 'object_created_at', 'object_modified_at', 'object_created_by', 'object_modified_by'] as $legacyColumn) {
                 self::assertFalse($table->hasColumn($legacyColumn), sprintf('%s must not expose legacy column %s.', $tableName, $legacyColumn));
             }
+
+            self::assertTrue($table->hasIndex('uniq_'.$tableName.'_uuid'), sprintf('%s must expose the deterministic Objecting uuid unique index.', $tableName));
+            self::assertTrue($table->hasIndex('uniq_'.$tableName.'_slug'), sprintf('%s must expose the deterministic Objecting slug unique index.', $tableName));
         }
 
         $notification = $schema->getTable('notifying_notification');
@@ -145,7 +148,7 @@ final class NotificationDispatchPlanRepositoryTest extends KernelTestCase
         $recipient = new NotificationRecipientEntity(
             id: '00000000-0000-4000-8000-000000002'.$suffix,
             notification: $notification,
-            recipientType: RecipientType::User,
+            recipientType: NotificationRecipientType::User,
             recipientKey: 'test-user-'.$suffix,
         );
 

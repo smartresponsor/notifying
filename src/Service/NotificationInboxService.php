@@ -6,13 +6,11 @@ namespace App\Notifying\Service;
 
 use App\Notifying\Entity\NotificationRecipientEntity;
 use App\Notifying\Repository\NotificationRecipientRepository;
-use Doctrine\ORM\EntityManagerInterface;
 
 final class NotificationInboxService
 {
     public function __construct(
         private readonly NotificationRecipientRepository $recipientRepository,
-        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -58,7 +56,7 @@ final class NotificationInboxService
         }
 
         if ($updated > 0) {
-            $this->entityManager->flush();
+            $this->recipientRepository->flush();
         }
 
         return $updated;
@@ -90,7 +88,7 @@ final class NotificationInboxService
         }
 
         $entry->ack($modifiedBy);
-        $this->entityManager->flush();
+        $this->recipientRepository->flush();
 
         return true;
     }
@@ -107,7 +105,7 @@ final class NotificationInboxService
         }
 
         $entry->archive($modifiedBy);
-        $this->entityManager->flush();
+        $this->recipientRepository->flush();
 
         return true;
     }
@@ -124,7 +122,7 @@ final class NotificationInboxService
         }
 
         $entry->snoozeUntil($until, $modifiedBy);
-        $this->entityManager->flush();
+        $this->recipientRepository->flush();
 
         return true;
     }

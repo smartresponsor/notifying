@@ -2,6 +2,7 @@
 /.env.*.local
 /var/
 /vendor/
+/node_modules/
 /public/bundles/
 /config/reference.php
 /bin/notifying-console-diagnose.ps1

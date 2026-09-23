@@ -12,7 +12,6 @@ use App\Notifying\Enum\NotificationDispatchStatus;
 use App\Notifying\Repository\NotificationDispatchPlanRepository;
 use App\Notifying\Repository\NotificationPreferenceRepository;
 use App\Notifying\Repository\NotificationSubscriptionRepository;
-use Doctrine\ORM\EntityManagerInterface;
 
 final class NotificationDispatchPlannerService
 {
@@ -20,7 +19,6 @@ final class NotificationDispatchPlannerService
         private readonly NotificationDispatchPlanRepository $dispatchPlanRepository,
         private readonly NotificationPreferenceRepository $preferenceRepository,
         private readonly NotificationSubscriptionRepository $subscriptionRepository,
-        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -113,7 +111,7 @@ final class NotificationDispatchPlannerService
             metadata: $metadata,
             createdBy: $createdBy,
         );
-        $this->entityManager->persist($plan);
+        $this->dispatchPlanRepository->persist($plan);
 
         return $plan;
     }

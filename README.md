@@ -32,7 +32,7 @@ Notifying treats Objecting field packs as the canonical storage for shared syste
 
 The Doctrine entity metadata is the current schema design source of truth. Migrations exist to bring already-deployed databases to that design; they must not preserve a second parallel field model. Schema convergence is fail-fast when legacy and canonical Objecting columns coexist, because production data is not guessed or silently merged.
 
-The host application should mount this repository through a Composer path repository and require `smartresponsor/notifying` when Notifying is promoted into the host runtime.
+The host application should mount this repository through a Composer path repository and require `notifying/notification` when Notifying is promoted into the host runtime.
 
 ## Responsibility boundary
 
@@ -118,4 +118,4 @@ src/Controller/Api/
 src/Entity/
 src/Enum/
 src/Message/
-src/MessageHandler/
+src/Handler/

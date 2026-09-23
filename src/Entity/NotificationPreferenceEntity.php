@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Notifying\Entity;
 
 use App\Notifying\Enum\NotificationChannel;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use App\Notifying\Repository\NotificationPreferenceRepository;
 use App\Objecting\EntityInterface\ObjectAuditedInterface;
 use App\Objecting\EntityInterface\ObjectIdentifiedInterface;
@@ -30,8 +30,8 @@ class NotificationPreferenceEntity implements ObjectIdentifiedInterface, ObjectA
     #[ORM\Column(type: Types::GUID)]
     private string $id;
 
-    #[ORM\Column(enumType: RecipientType::class)]
-    private RecipientType $recipientType;
+    #[ORM\Column(enumType: NotificationRecipientType::class)]
+    private NotificationRecipientType $recipientType;
 
     #[ORM\Column(length: 160)]
     private string $recipientKey;
@@ -72,7 +72,7 @@ class NotificationPreferenceEntity implements ObjectIdentifiedInterface, ObjectA
     #[ORM\Column(type: Types::JSON)]
     private array $policy = [];
 
-    public function __construct(string $id, RecipientType $recipientType, string $recipientKey, string $topic, ?string $createdBy = null)
+    public function __construct(string $id, NotificationRecipientType $recipientType, string $recipientKey, string $topic, ?string $createdBy = null)
     {
         $this->id = $id;
         $this->recipientType = $recipientType;
@@ -83,7 +83,7 @@ class NotificationPreferenceEntity implements ObjectIdentifiedInterface, ObjectA
         $this->initializeObjectTitle(firstTitle: $topic, lastTitle: $recipientKey);
     }
 
-    public function recipientType(): RecipientType
+    public function recipientType(): NotificationRecipientType
     {
         return $this->recipientType;
     }

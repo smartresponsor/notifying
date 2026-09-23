@@ -1,5 +1,53 @@
 # CMCP Change Journal
 
+## 2026-09-23 — Canonical RC closure pass
+
+### Reconnaissance and market baseline
+
+- Re-read target documentation, Composer manifests/lock, Symfony bootstrap/config, Doctrine entities/repositories/services/controllers, migrations, tests, local Gating surface, and Git state on `release/notifying-20260817`.
+- Read current Objecting, Cruding, Viewing, Interfacing, Gating, and Canonization contracts. No target-owned code-memory scope is declared; repository-local graph planning resolves to Notifying with the shared workspace as read-only navigation context.
+- Market comparison across Novu, Knock, Courier, and SuprSend shows mature expectations around recipient preferences, quiet hours/snooze, digest/rate controls, workflow/routing policy, inbox UX, and operational observability. Notifying already owns the RC-critical inbox/preferences/subscription/durable-dispatch boundary; richer workflow, analytics, rate-limit, and UI capability remains growth work.
+
+### Canonization sources and target mapping
+
+- Consulted current textual Canon001, Canon007, Canon008, Canon010, Canon018, Canon019, Canon020, Canon021, Canon022, Canon023, Canon024, Canon027, Canon030, Canon032, Canon033, Canon034, Canon038, Canon039, Canon041, Canon043, Canon044, Canon045, Canon047, Canon048, Canon049, Canon050, Canon051, Canon052, Canon053, and Canon054, plus the architecture README, guard matrix, rules journal, and root `AGENTS.md`.
+- Canon018: `smartresponsor/notifying` is not a canonical identity for `App\\Notifying\\`; normalize to `notifying/notification` and Notification-prefixed subject types.
+- Canon001/020: move the Messenger handler from `src/MessageHandler/` to `src/Handler/`.
+- Canon021: no component-local generic CRUD controller or route grammar remains; Cruding owns that surface.
+- Canon022/023/043/045/053: the application dependency contour is present; local sibling path repositories are in the current closed exception set, use symlinks, and use `dev-master` identities.
+- Canon032: register `App\\Notifying\\NotifyingBundle` in standalone `config/bundles.php`.
+- Canon038: namespace component-owned Cruding/API/Admin YAML filenames with the canonical `notification_` subject prefix.
+- Canon041: add Symfony functional/browser tooling plus repository-local Playwright dependency/configuration/execution surface; behavioral coverage evidence remains separate debt until browser scenarios are authored.
+- Canon044/054: active Doctrine metadata uses entity-native Objecting fields, underscore-number-aware naming, semantic local identifiers, and standalone Objecting bundle activation. Historical legacy/hash identifiers are migration input only.
+- Canon047: direct Doctrine manager access belongs in repositories; services consume repository persistence operations.
+- Canon049/050/051: no entity orchestration dependency, runtime service-container access, or repository-to-orchestration dependency was found in inspected source.
+- Canon052: consume Gating through Composer and keep local `.gating/` artifact-only; restore its README to that consumer boundary.
+
+### Selected RC-critical work
+
+1. Close hard Gating failures for package identity, role placement, bundle registration, component YAML names, browser-test tooling, and repository-owned persistence.
+2. Repair stale Objecting audit DQL paths still present in two repositories and re-run Doctrine/schema checks.
+3. Re-run Gating, Composer validation, PHP lint/static analysis, tests, Symfony lint, schema parity, and package/browser-tool validation; fix in-scope hard failures before integration.
+4. Keep growth separate: broader digest scheduling, rate limiting, workflow authoring, analytics, and richer inbox UI are not RC blockers without correctness evidence.
+
+### Material risks
+
+- The worktree entered this pass with pre-existing Gating manifest/lock changes; preserve and verify them rather than discarding them.
+- Canon018 package identity is externally visible. This bounded repository can correct the producer identity but cannot mutate sibling/Host consumers; stale external require declarations must be migrated in their owning repositories.
+- PHP and behavioral coverage warnings are real quality debt, but distinct from deterministic hard-canon failures and must not be hidden by an RC claim.
+
+### Implementation and verification result
+
+- Canonical package identity is now `notifying/notification`; subject types use the `Notification*` vocabulary, including `NotificationRecipientType` and `NotificationDashboardController`.
+- Messenger handling moved to `src/Handler/`; standalone bundle registration and `notification_*.yaml` component configuration naming are canonical.
+- Service-layer direct Doctrine manager dependencies were removed. Notifying repositories now own persist/flush access, and stale Objecting audit DQL paths were corrected.
+- Consumer-local copied Gating engine content was removed from `.gating/`; the executable gate is consumed through `gating/gate`, while the local directory remains an artifact surface.
+- Added Symfony Panther/Test Pack and repository-local Playwright tooling; `node_modules/` is ignored.
+- Added `Version20260923185000` to converge legacy hash-derived Objecting uuid/slug unique-index names to deterministic semantic Canon054 names. Regression coverage asserts canonical identity indexes for all Notifying entities.
+- Gating: 70 rules, 0 failed, 3 warnings, 14 skipped. Remaining warnings are PHPDoc coverage, PHP coverage below target (53.2% lines / 46.5% methods / 41.6% branches), and missing behavioral/UI coverage evidence.
+- PHP lint changed files: PASS. PHP-CS-Fixer dry-run: PASS. PHPStan: PASS. PHPUnit: PASS, 16 tests / 174 assertions. Doctrine schema parity: PASS after 6 migrations / 167 SQL queries. Composer validate --strict --check-lock: PASS.
+- Aggregate `composer quality` is externally blocked during Symfony container/YAML compilation by the currently dirty symlinked Viewing worktree: `App\\Viewing\\Controller\\View\\ViewHomeController` is redeclared while Viewing is mid-refactor. Viewing was inspected read-only and has 39 dirty entries; no sibling changes were made from this Notifying run.
+
 ## 2026-09-14 — RC hardening baseline
 
 ### Reconnaissance read

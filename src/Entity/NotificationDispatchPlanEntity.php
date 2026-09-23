@@ -6,7 +6,7 @@ namespace App\Notifying\Entity;
 
 use App\Notifying\Enum\NotificationChannel;
 use App\Notifying\Enum\NotificationDispatchStatus;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use App\Notifying\Repository\NotificationDispatchPlanRepository;
 use App\Objecting\EntityInterface\ObjectAuditedInterface;
 use App\Objecting\EntityInterface\ObjectIdentifiedInterface;
@@ -44,8 +44,8 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
     #[ORM\JoinColumn(name: 'recipient_entry_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private NotificationRecipientEntity $recipientEntry;
 
-    #[ORM\Column(enumType: RecipientType::class)]
-    private RecipientType $recipientType;
+    #[ORM\Column(enumType: NotificationRecipientType::class)]
+    private NotificationRecipientType $recipientType;
 
     #[ORM\Column(length: 160)]
     private string $recipientKey;
@@ -143,7 +143,7 @@ class NotificationDispatchPlanEntity implements ObjectIdentifiedInterface, Objec
         return $this->recipientEntry;
     }
 
-    public function recipientType(): RecipientType
+    public function recipientType(): NotificationRecipientType
     {
         return $this->recipientType;
     }

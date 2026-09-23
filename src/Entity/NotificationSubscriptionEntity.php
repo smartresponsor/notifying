@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifying\Entity;
 
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use App\Notifying\Repository\NotificationSubscriptionRepository;
 use App\Objecting\EntityInterface\ObjectAuditedInterface;
 use App\Objecting\EntityInterface\ObjectIdentifiedInterface;
@@ -30,8 +30,8 @@ class NotificationSubscriptionEntity implements ObjectIdentifiedInterface, Objec
     #[ORM\Column(type: Types::GUID)]
     private string $id;
 
-    #[ORM\Column(enumType: RecipientType::class)]
-    private RecipientType $recipientType;
+    #[ORM\Column(enumType: NotificationRecipientType::class)]
+    private NotificationRecipientType $recipientType;
 
     #[ORM\Column(length: 160)]
     private string $recipientKey;
@@ -70,7 +70,7 @@ class NotificationSubscriptionEntity implements ObjectIdentifiedInterface, Objec
     /** @param array<string, mixed> $metadata */
     public function __construct(
         string $id,
-        RecipientType $recipientType,
+        NotificationRecipientType $recipientType,
         string $recipientKey,
         string $platform,
         string $appKey,
@@ -94,7 +94,7 @@ class NotificationSubscriptionEntity implements ObjectIdentifiedInterface, Objec
         $this->initializeObjectTitle(firstTitle: $platform, middleTitle: $appKey, lastTitle: $recipientKey);
     }
 
-    public function recipientType(): RecipientType
+    public function recipientType(): NotificationRecipientType
     {
         return $this->recipientType;
     }

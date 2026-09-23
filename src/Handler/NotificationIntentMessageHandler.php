@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Notifying\MessageHandler;
+namespace App\Notifying\Handler;
 
 use App\Notifying\Message\NotificationIntentMessage;
 use App\Notifying\Service\NotificationService;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifying\Entity;
 
+use App\Notifying\Enum\NotificationRecipientType;
 use App\Notifying\Enum\NotificationStatus;
-use App\Notifying\Enum\RecipientType;
 use App\Notifying\Repository\NotificationRecipientRepository;
 use App\Objecting\EntityInterface\ObjectAuditedInterface;
 use App\Objecting\EntityInterface\ObjectIdentifiedInterface;
@@ -32,8 +32,8 @@ class NotificationRecipientEntity implements ObjectIdentifiedInterface, ObjectAu
     #[ORM\JoinColumn(name: 'notification_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private NotificationEntity $notification;
 
-    #[ORM\Column(enumType: RecipientType::class)]
-    private RecipientType $recipientType;
+    #[ORM\Column(enumType: NotificationRecipientType::class)]
+    private NotificationRecipientType $recipientType;
 
     #[ORM\Column(length: 160)]
     private string $recipientKey;
@@ -59,7 +59,7 @@ class NotificationRecipientEntity implements ObjectIdentifiedInterface, ObjectAu
     public function __construct(
         string $id,
         NotificationEntity $notification,
-        RecipientType $recipientType,
+        NotificationRecipientType $recipientType,
         string $recipientKey,
         ?string $createdBy = null,
     ) {
@@ -81,7 +81,7 @@ class NotificationRecipientEntity implements ObjectIdentifiedInterface, ObjectAu
         return $this->notification;
     }
 
-    public function recipientType(): RecipientType
+    public function recipientType(): NotificationRecipientType
     {
         return $this->recipientType;
     }

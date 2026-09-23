@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Notifying\Repository;
 
 use App\Notifying\Entity\NotificationPreferenceEntity;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -19,7 +19,17 @@ final class NotificationPreferenceRepository extends ServiceEntityRepository
         parent::__construct($registry, NotificationPreferenceEntity::class);
     }
 
-    public function findForTopic(RecipientType $recipientType, string $recipientKey, string $topic): ?NotificationPreferenceEntity
+    public function persist(NotificationPreferenceEntity $preference): void
+    {
+        $this->getEntityManager()->persist($preference);
+    }
+
+    public function flush(): void
+    {
+        $this->getEntityManager()->flush();
+    }
+
+    public function findForTopic(NotificationRecipientType $recipientType, string $recipientKey, string $topic): ?NotificationPreferenceEntity
     {
         return $this->findOneBy([
             'recipientType' => $recipientType,
@@ -31,7 +41,7 @@ final class NotificationPreferenceRepository extends ServiceEntityRepository
     /**
      * @return list<NotificationPreferenceEntity>
      */
-    public function listForRecipient(RecipientType $recipientType, string $recipientKey): array
+    public function listForRecipient(NotificationRecipientType $recipientType, string $recipientKey): array
     {
         return $this->createQueryBuilder('preference')
             ->andWhere('preference.recipientType = :recipientType')

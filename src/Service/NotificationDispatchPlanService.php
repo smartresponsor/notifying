@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Notifying\Service;
 
 use App\Notifying\Entity\NotificationDispatchPlanEntity;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use App\Notifying\Repository\NotificationDispatchPlanRepository;
 use App\Notifying\Repository\NotificationPreferenceRepository;
 use App\Notifying\Repository\NotificationRecipientRepository;
 use App\Notifying\Repository\NotificationSubscriptionRepository;
-use Doctrine\ORM\EntityManagerInterface;
 
 final class NotificationDispatchPlanService
 {
@@ -19,7 +18,6 @@ final class NotificationDispatchPlanService
         private readonly NotificationPreferenceRepository $preferenceRepository,
         private readonly NotificationRecipientRepository $recipientRepository,
         private readonly NotificationSubscriptionRepository $subscriptionRepository,
-        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -73,7 +71,7 @@ final class NotificationDispatchPlanService
     /**
      * @return list<array<string, mixed>>
      */
-    public function reactivatePushForSubscription(RecipientType $recipientType, string $recipientKey, string $tokenHash, ?string $modifiedBy = null): array
+    public function reactivatePushForSubscription(NotificationRecipientType $recipientType, string $recipientKey, string $tokenHash, ?string $modifiedBy = null): array
     {
         if ('' === $recipientKey || '' === $tokenHash) {
             return [];
@@ -106,7 +104,7 @@ final class NotificationDispatchPlanService
         }
 
         if ([] !== $plans) {
-            $this->entityManager->flush();
+            $this->dispatchPlanRepository->flush();
         }
 
         return NotificationService::dispatchPlanSummary($reactivatedPlans);
@@ -115,7 +113,7 @@ final class NotificationDispatchPlanService
     /**
      * @return list<array<string, mixed>>
      */
-    public function retargetPushForSubscription(RecipientType $recipientType, string $recipientKey, string $oldTokenHash, string $newTokenHash, ?string $modifiedBy = null): array
+    public function retargetPushForSubscription(NotificationRecipientType $recipientType, string $recipientKey, string $oldTokenHash, string $newTokenHash, ?string $modifiedBy = null): array
     {
         if ('' === $recipientKey || '' === $oldTokenHash || '' === $newTokenHash || $oldTokenHash === $newTokenHash) {
             return [];
@@ -135,7 +133,7 @@ final class NotificationDispatchPlanService
         }
 
         if ([] !== $plans) {
-            $this->entityManager->flush();
+            $this->dispatchPlanRepository->flush();
         }
 
         return NotificationService::dispatchPlanSummary($plans);
@@ -144,7 +142,7 @@ final class NotificationDispatchPlanService
     /**
      * @return list<array<string, mixed>>
      */
-    public function suppressPushForInvalidSubscription(RecipientType $recipientType, string $recipientKey, string $tokenHash, string $reasonCode, ?string $modifiedBy = null): array
+    public function suppressPushForInvalidSubscription(NotificationRecipientType $recipientType, string $recipientKey, string $tokenHash, string $reasonCode, ?string $modifiedBy = null): array
     {
         if ('' === $recipientKey || '' === $tokenHash || '' === trim($reasonCode)) {
             return [];
@@ -167,7 +165,7 @@ final class NotificationDispatchPlanService
         }
 
         if ([] !== $plans) {
-            $this->entityManager->flush();
+            $this->dispatchPlanRepository->flush();
         }
 
         return NotificationService::dispatchPlanSummary($plans);
@@ -176,7 +174,7 @@ final class NotificationDispatchPlanService
     /**
      * @return list<array<string, mixed>>
      */
-    public function suppressPushForPreference(RecipientType $recipientType, string $recipientKey, string $topic, string $reason, ?string $modifiedBy = null): array
+    public function suppressPushForPreference(NotificationRecipientType $recipientType, string $recipientKey, string $topic, string $reason, ?string $modifiedBy = null): array
     {
         if ('' === $recipientKey || '' === $topic || '' === trim($reason)) {
             return [];
@@ -192,7 +190,7 @@ final class NotificationDispatchPlanService
         }
 
         if ([] !== $plans) {
-            $this->entityManager->flush();
+            $this->dispatchPlanRepository->flush();
         }
 
         return NotificationService::dispatchPlanSummary($plans);
@@ -201,7 +199,7 @@ final class NotificationDispatchPlanService
     /**
      * @return list<array<string, mixed>>
      */
-    public function reactivatePushForPreference(RecipientType $recipientType, string $recipientKey, string $topic, ?string $modifiedBy = null): array
+    public function reactivatePushForPreference(NotificationRecipientType $recipientType, string $recipientKey, string $topic, ?string $modifiedBy = null): array
     {
         if ('' === $recipientKey || '' === $topic) {
             return [];
@@ -222,7 +220,7 @@ final class NotificationDispatchPlanService
         }
 
         if ([] !== $plans) {
-            $this->entityManager->flush();
+            $this->dispatchPlanRepository->flush();
         }
 
         return NotificationService::dispatchPlanSummary($plans);
@@ -231,7 +229,7 @@ final class NotificationDispatchPlanService
     /**
      * @return list<array<string, mixed>>
      */
-    public function reschedulePushForPreference(RecipientType $recipientType, string $recipientKey, string $topic, ?\DateTimeImmutable $scheduledAt, ?string $modifiedBy = null): array
+    public function reschedulePushForPreference(NotificationRecipientType $recipientType, string $recipientKey, string $topic, ?\DateTimeImmutable $scheduledAt, ?string $modifiedBy = null): array
     {
         if ('' === $recipientKey || '' === $topic) {
             return [];
@@ -245,7 +243,7 @@ final class NotificationDispatchPlanService
             $plan->rescheduleHandoffReady($effectiveAt, $reason, ['scheduledBy' => 'preference-update'], $modifiedBy);
         }
         if ([] !== $plans) {
-            $this->entityManager->flush();
+            $this->dispatchPlanRepository->flush();
         }
 
         return NotificationService::dispatchPlanSummary($plans);
@@ -271,7 +269,7 @@ final class NotificationDispatchPlanService
         }
 
         if ([] !== $plans) {
-            $this->entityManager->flush();
+            $this->dispatchPlanRepository->flush();
         }
 
         return NotificationService::dispatchPlanSummary($plans);
@@ -289,7 +287,7 @@ final class NotificationDispatchPlanService
         }
 
         if ([] !== $plans) {
-            $this->entityManager->flush();
+            $this->dispatchPlanRepository->flush();
         }
 
         return NotificationService::dispatchPlanSummary($plans);
@@ -307,7 +305,7 @@ final class NotificationDispatchPlanService
         }
 
         if ([] !== $plans) {
-            $this->entityManager->flush();
+            $this->dispatchPlanRepository->flush();
         }
 
         return NotificationService::dispatchPlanSummary($plans);

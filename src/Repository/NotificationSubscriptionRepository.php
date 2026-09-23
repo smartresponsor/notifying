@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Notifying\Repository;
 
 use App\Notifying\Entity\NotificationSubscriptionEntity;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -19,12 +19,22 @@ final class NotificationSubscriptionRepository extends ServiceEntityRepository
         parent::__construct($registry, NotificationSubscriptionEntity::class);
     }
 
+    public function persist(NotificationSubscriptionEntity $subscription): void
+    {
+        $this->getEntityManager()->persist($subscription);
+    }
+
+    public function flush(): void
+    {
+        $this->getEntityManager()->flush();
+    }
+
     public function findByTokenHash(string $tokenHash): ?NotificationSubscriptionEntity
     {
         return $this->findOneBy(['tokenHash' => $tokenHash]);
     }
 
-    public function findForDevice(RecipientType $recipientType, string $recipientKey, string $appKey, string $platform, string $deviceId): ?NotificationSubscriptionEntity
+    public function findForDevice(NotificationRecipientType $recipientType, string $recipientKey, string $appKey, string $platform, string $deviceId): ?NotificationSubscriptionEntity
     {
         return $this->findOneBy([
             'recipientType' => $recipientType,
@@ -38,7 +48,7 @@ final class NotificationSubscriptionRepository extends ServiceEntityRepository
     /**
      * @return list<NotificationSubscriptionEntity>
      */
-    public function listActiveForRecipient(RecipientType $recipientType, string $recipientKey, ?string $appKey = null): array
+    public function listActiveForRecipient(NotificationRecipientType $recipientType, string $recipientKey, ?string $appKey = null): array
     {
         $builder = $this->createQueryBuilder('subscription')
             ->andWhere('subscription.recipientType = :recipientType')

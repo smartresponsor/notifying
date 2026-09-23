@@ -6,7 +6,7 @@ namespace App\Notifying\Tests\Entity;
 
 use App\Notifying\Entity\NotificationPreferenceEntity;
 use App\Notifying\Enum\NotificationChannel;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use PHPUnit\Framework\TestCase;
 
 final class NotificationPreferenceEntityTest extends TestCase
@@ -80,7 +80,7 @@ final class NotificationPreferenceEntityTest extends TestCase
     {
         return new NotificationPreferenceEntity(
             id: '00000000-0000-4000-8000-000000000001',
-            recipientType: RecipientType::User,
+            recipientType: NotificationRecipientType::User,
             recipientKey: 'test-user',
             topic: 'task',
         );

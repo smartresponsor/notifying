@@ -11,7 +11,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use Symfony\Component\HttpFoundation\Response;
 
 #[AdminDashboard(routePath: '/admin/notifying', routeName: 'notifying_admin_dashboard')]
-final class NotifyingDashboardController extends AbstractDashboardController
+final class NotificationDashboardController extends AbstractDashboardController
 {
     public function index(): Response
     {

@@ -1,5 +1,5 @@
 {
-  "name": "smartresponsor/notifying",
+  "name": "notifying/notification",
   "description": "Smart Responsor Notifying platform component: notification center, inbox, preferences, subscriptions, and delivery planning.",
   "type": "symfony-bundle",
   "license": "proprietary",
@@ -65,6 +65,16 @@
           "tabling/table": "dev-master"
         }
       }
+    },
+    {
+      "type": "path",
+      "url": "../Gating",
+      "options": {
+        "symlink": true,
+        "versions": {
+          "gating/gate": "dev-master"
+        }
+      }
     }
   ],
   "require": {
@@ -99,7 +109,10 @@
     "phpstan/phpstan": "^2.2",
     "phpstan/phpstan-doctrine": "^2.0",
     "phpunit/phpunit": "^12.0",
-    "symfony/phpunit-bridge": "^8.0"
+    "symfony/panther": "^2.4",
+    "symfony/phpunit-bridge": "^8.0",
+    "symfony/test-pack": "^1.2",
+    "gating/gate": "dev-master"
   },
   "autoload": {
     "psr-4": {
@@ -138,8 +151,10 @@
       "@test",
       "@lint:container",
       "@lint:yaml",
-      "@schema:parity"
-    ]
+      "@schema:parity",
+      "@gate"
+    ],
+    "gate": "@php vendor/bin/gating check --target=."
   },
   "config": {
     "allow-plugins": {

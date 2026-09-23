@@ -8,16 +8,14 @@ use App\Notifying\Entity\NotificationDispatchPlanEntity;
 use App\Notifying\Entity\NotificationEntity;
 use App\Notifying\Entity\NotificationRecipientEntity;
 use App\Notifying\Enum\NotificationPriority;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use App\Notifying\Repository\NotificationRecipientRepository;
 use App\Notifying\Repository\NotificationRepository;
 use App\Notifying\ValueObject\NotificationIntent;
-use Doctrine\ORM\EntityManagerInterface;
 
 final class NotificationService
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
         private readonly NotificationRepository $notificationRepository,
         private readonly NotificationRecipientRepository $recipientRepository,
         private readonly NotificationDispatchPlannerService $dispatchPlanner,
@@ -45,7 +43,7 @@ final class NotificationService
         return new NotificationIntent(
             sourceComponent: (string) ($payload['sourceComponent'] ?? 'unknown'),
             eventName: (string) ($payload['eventName'] ?? 'unknown'),
-            recipientType: RecipientType::tryFrom((string) ($payload['recipientType'] ?? $recipient['type'] ?? 'user')) ?? RecipientType::User,
+            recipientType: NotificationRecipientType::tryFrom((string) ($payload['recipientType'] ?? $recipient['type'] ?? 'user')) ?? NotificationRecipientType::User,
             recipientKey: (string) ($payload['recipientKey'] ?? $recipient['key'] ?? ''),
             title: (string) ($payload['title'] ?? ''),
             body: (string) ($payload['body'] ?? ''),
@@ -94,7 +92,7 @@ final class NotificationService
             ->withActionUrl($intent->actionUrl);
 
         if (null === $existing) {
-            $this->entityManager->persist($notification);
+            $this->notificationRepository->persist($notification);
         }
 
         $recipient = null;
@@ -111,13 +109,13 @@ final class NotificationService
                 recipientKey: $intent->recipientKey,
                 createdBy: $createdBy,
             );
-            $this->entityManager->persist($recipient);
+            $this->recipientRepository->persist($recipient);
             $recipientCreated = true;
         }
 
         $dispatchPlans = $this->dispatchPlanner->planForRecipient($recipient, $createdBy);
 
-        $this->entityManager->flush();
+        $this->notificationRepository->flush();
 
         return [
             'notificationId' => $notification->id(),

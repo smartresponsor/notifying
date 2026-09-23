@@ -8,7 +8,7 @@ use App\Notifying\Entity\NotificationDispatchPlanEntity;
 use App\Notifying\Entity\NotificationRecipientEntity;
 use App\Notifying\Enum\NotificationChannel;
 use App\Notifying\Enum\NotificationDispatchStatus;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -20,6 +20,16 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, NotificationDispatchPlanEntity::class);
+    }
+
+    public function persist(NotificationDispatchPlanEntity $dispatchPlan): void
+    {
+        $this->getEntityManager()->persist($dispatchPlan);
+    }
+
+    public function flush(): void
+    {
+        $this->getEntityManager()->flush();
     }
 
     public function findForRecipientEntryAndChannel(NotificationRecipientEntity $recipient, NotificationChannel $channel): ?NotificationDispatchPlanEntity
@@ -151,7 +161,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
     /**
      * @return list<NotificationDispatchPlanEntity>
      */
-    public function listHandoffReadyPushForRecipientTarget(RecipientType $recipientType, string $recipientKey, string $target, int $limit = 100): array
+    public function listHandoffReadyPushForRecipientTarget(NotificationRecipientType $recipientType, string $recipientKey, string $target, int $limit = 100): array
     {
         if ('' === $recipientKey || '' === $target) {
             return [];
@@ -177,7 +187,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
     /**
      * @return list<NotificationDispatchPlanEntity>
      */
-    public function listHandoffReadyPushForRecipientTopic(RecipientType $recipientType, string $recipientKey, string $topic, int $limit = 100): array
+    public function listHandoffReadyPushForRecipientTopic(NotificationRecipientType $recipientType, string $recipientKey, string $topic, int $limit = 100): array
     {
         if ('' === $recipientKey || '' === $topic) {
             return [];
@@ -204,7 +214,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
     /**
      * @return list<NotificationDispatchPlanEntity>
      */
-    public function listPolicySuppressedPushForRecipientTopic(RecipientType $recipientType, string $recipientKey, string $topic, int $limit = 100): array
+    public function listPolicySuppressedPushForRecipientTopic(NotificationRecipientType $recipientType, string $recipientKey, string $topic, int $limit = 100): array
     {
         if ('' === $recipientKey || '' === $topic) {
             return [];
@@ -233,7 +243,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
     /**
      * @return list<NotificationDispatchPlanEntity>
      */
-    public function listSuppressedPushForRecipient(RecipientType $recipientType, string $recipientKey, int $limit = 100): array
+    public function listSuppressedPushForRecipient(NotificationRecipientType $recipientType, string $recipientKey, int $limit = 100): array
     {
         if ('' === $recipientKey) {
             return [];

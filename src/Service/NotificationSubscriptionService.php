@@ -5,16 +5,14 @@ declare(strict_types=1);
 namespace App\Notifying\Service;
 
 use App\Notifying\Entity\NotificationSubscriptionEntity;
-use App\Notifying\Enum\RecipientType;
+use App\Notifying\Enum\NotificationRecipientType;
 use App\Notifying\Repository\NotificationSubscriptionRepository;
-use Doctrine\ORM\EntityManagerInterface;
 
 final class NotificationSubscriptionService
 {
     public function __construct(
         private readonly NotificationSubscriptionRepository $subscriptionRepository,
         private readonly NotificationDispatchPlanService $dispatchPlanService,
-        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -24,7 +22,7 @@ final class NotificationSubscriptionService
      */
     public function registerSubscription(array $payload, ?string $modifiedBy = null): array
     {
-        $recipientType = RecipientType::tryFrom((string) ($payload['recipientType'] ?? 'user')) ?? RecipientType::User;
+        $recipientType = NotificationRecipientType::tryFrom((string) ($payload['recipientType'] ?? 'user')) ?? NotificationRecipientType::User;
         $recipientKey = (string) ($payload['recipientKey'] ?? '');
         $platform = (string) ($payload['platform'] ?? '');
         $appKey = (string) ($payload['appKey'] ?? 'default');
@@ -74,7 +72,7 @@ final class NotificationSubscriptionService
                 metadata: $metadata,
                 createdBy: $modifiedBy,
             );
-            $this->entityManager->persist($subscription);
+            $this->subscriptionRepository->persist($subscription);
             $created = true;
         } else {
             $previousTokenHash = $subscription->tokenHash();
@@ -86,7 +84,7 @@ final class NotificationSubscriptionService
             $subscription->setExpiresAt(new \DateTimeImmutable($payload['expiresAt']), $modifiedBy);
         }
 
-        $this->entityManager->flush();
+        $this->subscriptionRepository->flush();
 
         $retargetedDispatchPlans = null === $previousTokenHash ? [] : $this->dispatchPlanService->retargetPushForSubscription(
             recipientType: $subscription->recipientType(),
@@ -145,7 +143,7 @@ final class NotificationSubscriptionService
 
         if ($subscription->enabled()) {
             $subscription->disable($modifiedBy);
-            $this->entityManager->flush();
+            $this->subscriptionRepository->flush();
         }
 
         $suppressedDispatchPlans = $this->dispatchPlanService->suppressPushForInvalidSubscription(
@@ -182,7 +180,7 @@ final class NotificationSubscriptionService
 
         if ($subscription->enabled()) {
             $subscription->disable($modifiedBy);
-            $this->entityManager->flush();
+            $this->subscriptionRepository->flush();
         }
 
         return [
@@ -203,7 +201,7 @@ final class NotificationSubscriptionService
             return $this->subscriptionRepository->findByTokenHash($tokenHash);
         }
 
-        $recipientType = RecipientType::tryFrom((string) ($payload['recipientType'] ?? 'user')) ?? RecipientType::User;
+        $recipientType = NotificationRecipientType::tryFrom((string) ($payload['recipientType'] ?? 'user')) ?? NotificationRecipientType::User;
         $recipientKey = (string) ($payload['recipientKey'] ?? '');
         $platform = (string) ($payload['platform'] ?? '');
         $appKey = (string) ($payload['appKey'] ?? 'default');

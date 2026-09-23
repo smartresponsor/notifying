@@ -10,5 +10,8 @@ services:
   App\Notifying\Repository\:
     resource: '../../src/Repository/'
 
+  App\Notifying\Handler\:
+    resource: '../../src/Handler/'
+
   App\Notifying\Service\:
     resource: '../../src/Service/'

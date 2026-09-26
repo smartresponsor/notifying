@@ -44,9 +44,10 @@
 
 ### Integration state
 
-- Branch remains release/notifying-20260817 with upstream origin/release/notifying-20260817.
-- Pre-existing staged LICENSE and NOTICE plus the pre-existing composer.json license mutation are unrelated licensing work; pre-existing .gating/README.md is also unrelated and remains preserved.
-- The Canon055 correction is complete in the working tree. Git publication must preserve those unrelated staged/dirty changes rather than silently folding them into this task's commit.
+- Branch: release/notifying-20260817 with upstream origin/release/notifying-20260817.
+- Signed RC commit 0f5247b isolates the Canon055 correction and this journal from unrelated licensing/Gating work.
+- Pre-existing LICENSE and NOTICE were removed from the Git index only and remain physically preserved as untracked files; the pre-existing composer.json PolyForm license mutation was restored in the working tree after the isolated commit; pre-existing .gating/README.md remains dirty and untouched.
+- Publication is authorized by the task specification; after this journal closure commit, the current branch is pushed and post-push ahead/behind/worktree state is inspected.
 
 ## 2026-09-23 — Canonical RC closure pass
 

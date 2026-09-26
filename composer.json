@@ -1,6 +1,6 @@
 {
   "name": "notifying/notification",
-  "description": "Smart Responsor Notifying platform component: notification center, inbox, preferences, subscriptions, and delivery planning.",
+  "description": "Notifying platform component: notification center, inbox, preferences, subscriptions, and delivery planning.",
   "type": "symfony-bundle",
   "license": "proprietary",
   "minimum-stability": "dev",

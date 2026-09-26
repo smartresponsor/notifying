@@ -16,7 +16,7 @@ It owns notification meaning, inbox state, recipient preferences, device subscri
 
 ## Mandatory platform stack
 
-Notifying is a platform application component and therefore connects the shared SmartResponsor stack:
+Notifying is a platform application component and therefore connects the shared platform stack:
 
 - EasyAdmin for internal back-office screens and entity CRUD entry points.
 - Objecting for reusable system fields such as identity, audit, and title field packs.

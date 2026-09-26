@@ -1,5 +1,53 @@
 # CMCP Change Journal
 
+## 2026-09-26 — Canon055 RC terminology closure
+
+### Reconnaissance and market baseline
+
+- Re-read the authoritative execution specification, current Notifying README/manifests, notification services/handler/message/tests, Git state, and the mandatory Objecting, Cruding, Viewing, Interfacing, Gating, and Canonization contours.
+- The repository-local Code Memory scope is not declared; Console MCP resolves the active graph to Notifying with the shared workspace as read-only navigation context.
+- Current notification-infrastructure expectations include multi-channel policy/routing, recipient preferences, in-app inbox state, durable dispatch state, observability, and provider abstraction. Notifying already owns inbox/preferences/subscriptions/dispatch planning while physical provider delivery remains outside this component.
+- RC-critical work remains correctness/canon enforcement and deterministic verification. Richer preference UI, workflow authoring, analytics, experiments, localization, and provider-level failover remain growth work unless separately justified by product requirements.
+
+### Canonization mapping
+
+- Consulted Canon019, Canon020, Canon021, Canon022, Canon023, Canon024, Canon026, Canon029, Canon030, Canon031, Canon041, Canon042, Canon044, Canon048, Canon050, Canon052, Canon053, Canon054, and Canon055 from the local Canonization repository.
+- Canon019/020: current source remains role-first Symfony topology with no competing Domain/Application/Infrastructure or Port/Adapter roots.
+- Canon021: Notifying exposes notification-specific operations; generic CRUD ownership remains in Cruding.
+- Canon022/023/053: the mandatory platform dependency contour is declared through allowed sibling Composer path repositories with symlinks in development.
+- Canon024: production dependency resolution stays package/VCS based in composer.prod.json.
+- Canon026/029/030: PHP/Symfony floors, quality tooling, and schema-parity scripts are present.
+- Canon044/054: Objecting-backed persisted fields and Doctrine physical identifiers remain entity-native/lower_snake_case.
+- Canon048/050: async messages remain detached from Doctrine entities and runtime services use injection rather than container access.
+- Canon052: Gating remains a Composer development dependency; the pre-existing dirty .gating/README.md is preserved rather than silently rewritten in this bounded pass.
+- Canon055: human-facing platform identity must be neutral; current README.md and Composer descriptions still used a consumer identity as umbrella platform wording.
+
+### Selected RC-critical work and baseline gates
+
+- Selected work: remove the Canon055 platform-identity leakage from current human-facing Notifying documentation/package descriptions without changing machine locators or consumer-domain history.
+- Pre-change gates: composer validate --strict --check-lock PASS; composer audit PASS; PHPStan PASS; PHPUnit PASS (16 tests, 174 assertions); Gating FAIL only on Canon055 findings in README.md and composer.json.
+- Existing worktree changes at start: .gating/README.md modified, LICENSE/NOTICE staged additions, composer.json license modified. They are preserved; this pass changes only the Canon055 description line within composer.json plus bounded Notifying-owned documentation/journal surfaces.
+
+### Growth workstream
+
+- Post-RC maturity candidates: richer end-user preference/inbox UX, workflow/routing authoring, notification analytics/diagnostics, experimentation/localization, and broader digest/rate controls.
+- These are intentionally not RC blockers for this bounded terminology/canon closure pass.
+
+### Final verification
+
+- Canon055 Gating: PASS; 9 rules evaluated, 0 failed, 0 warnings, 2 skipped.
+- Composer validate --strict --check-lock: PASS; Composer audit: PASS with no known advisories.
+- PHP-CS-Fixer dry-run: PASS; PHPStan: PASS; PHPUnit: PASS (16 tests, 174 assertions).
+- Symfony container lint: PASS; YAML lint: PASS for 15 files; Doctrine schema parity: PASS after 6 migrations / 167 SQL queries with mapping/schema synchronization and migrations up to date.
+- Aggregate composer quality exceeded the synchronous Console MCP call window, so every constituent deterministic gate was executed directly and passed.
+- No browser/mobile/UI file was changed in this pass; behavioral browser execution and visual screenshots are therefore not applicable to this RC terminology correction.
+
+### Integration state
+
+- Branch remains release/notifying-20260817 with upstream origin/release/notifying-20260817.
+- Pre-existing staged LICENSE and NOTICE plus the pre-existing composer.json license mutation are unrelated licensing work; pre-existing .gating/README.md is also unrelated and remains preserved.
+- The Canon055 correction is complete in the working tree. Git publication must preserve those unrelated staged/dirty changes rather than silently folding them into this task's commit.
+
 ## 2026-09-23 — Canonical RC closure pass
 
 ### Reconnaissance and market baseline

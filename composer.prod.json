@@ -38,6 +38,11 @@
     },
     {
       "type": "vcs",
+      "url": "git@github.com:smartresponsor/failing.git",
+      "no-api": true
+    },
+    {
+      "type": "vcs",
       "url": "https://github.com/smartresponsor/gating.git",
       "no-api": true
     }
@@ -53,6 +58,7 @@
     "doctrine/orm": "^3.3",
     "easycorp/easyadmin-bundle": "^5.0",
     "interfacing/interface": "dev-master",
+    "nelmio/api-doc-bundle": "^5.0",
     "objecting/object": "dev-master",
     "symfony/asset": "^8.1",
     "symfony/console": "^8.1",

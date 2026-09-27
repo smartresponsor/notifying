@@ -1,5 +1,87 @@
 # CMCP Change Journal
 
+## 2026-09-27 — Inspecting remediation pass
+
+### Reconnaissance and market baseline
+
+- Read the authoritative engine specification, current Git/upstream state, README, Composer manifest, RED Inspecting report, affected preference service, and mandatory Objecting/Cruding/Viewing/Interfacing/Gating/Canonization contours through Console MCP.
+- Market baseline: mature notification systems expose multi-channel routing, recipient preferences, persistent inbox/read state, async/event hooks, custom channels, and policy-driven delivery; Notifying already owns the semantic inbox/preferences/dispatch-plan boundary while provider transport remains in Delivering.
+- Starting branch: release/notifying-20260817 at c39fd04d6807366961895461ea9847540621b171, synchronized 0/0 with origin. Pre-existing dirty state preserved: .gating/README.md and composer.json modified; LICENSE and NOTICE untracked.
+- RED Inspecting baseline: 12 findings (1 high, 11 medium). The only high finding is NotificationPreferenceService::upsertPreference() complexity 26; medium findings are entity surface/cohesion and long-method heuristics.
+
+### Canonization mapping and boundary decisions
+
+- Consulted the current Canonization architecture rule corpus and guard matrix for the previously applicable role-first topology, no alternative Domain/Port/Adapter taxonomy, Cruding ownership, dependency/symlink/production-package contracts, PHP quality/schema parity, behavioral evidence, Objecting field ownership, async/runtime-container boundaries, Gating integration, and platform terminology rules.
+- Objecting keeps reusable system fields only; Notifying retains Entity/Doctrine/service/business behavior ownership. Cruding owns generic CRUD. Viewing and Interfacing remain presentation/shell helpers. Gating is executable enforcement rather than a competing source of normative meaning.
+- RC-critical remediation is limited to complexity/maintainability that can be improved without changing notification persistence or external API contracts. Entity splitting is not performed merely to silence heuristic findings because that would create Doctrine/API migration risk.
+
+### Selected RC-critical work
+
+- Refactor NotificationPreferenceService::upsertPreference() into cohesive private operations for preference resolution, payload application, mute handling, and dispatch reconciliation while preserving its public input/output contract and transaction order.
+- Verification gates: PHP lint/static analysis, PHPUnit, Gating, and a fresh standalone Inspecting run; repair in-scope regressions and reassess residual findings from actual output.
+
+### Growth workstream
+
+- Richer notification workflow authoring, analytics, experimentation/localization, provider failover, and broader UX remain post-RC growth work unless separate correctness evidence promotes them.
+
+### Implementation and verification result
+
+- Refactored NotificationPreferenceService::upsertPreference(), NotificationSubscriptionService::registerSubscription(), NotificationService::ingest(), and NotificationDispatchPlanRepository::claimHandoffReady() into cohesive private operations without changing their public contracts or persistence ownership.
+- The dispatch claim refactor preserves the atomic conditional UPDATE concurrency gate and expired-claim recovery semantics; repository tests cover due-only selection and expired-claim recovery.
+- Changed-PHP lint PASS. PHP-CS-Fixer dry-run PASS. PHPStan PASS with no errors. PHPUnit PASS: 16 tests / 174 assertions.
+- Gating PASS: 9 rules, 0 failed, 0 warnings, 2 skipped. Symfony container lint PASS. YAML lint PASS for 16 files. Doctrine schema parity PASS after 6 migrations / 167 SQL queries with mapping/schema synchronization and migrations up to date.
+- Fresh Inspecting report D--PhpstormProjects-www-Notifying-20260927-225908.json: 7 medium findings, 0 high findings, max complexity 13, 0 PHPStan errors. Baseline was 12 findings with 1 high and max complexity 26.
+- Remaining Inspecting findings are entity size/public-surface/cohesion heuristics only. They are retained as explicit medium design debt because splitting Doctrine entities solely to satisfy heuristic thresholds would introduce persistence/API migration risk without correctness evidence.
+- No browser/mobile/UI files were changed by this remediation; behavioral browser execution and visual screenshots are not applicable.
+
+### Integration boundary
+
+- This pass owns only the four PHP remediation files plus its journal entry. Concurrent/pre-existing changes in composer.json, composer.lock, composer.prod.json, config/bundles.php, config/openapi/, .gating/README.md, LICENSE, NOTICE, and the separate Canon/OpenAPI journal section are preserved and excluded from this remediation commit.
+
+
+## 2026-09-27 — Canon/OpenAPI RC remediation
+
+### Reconnaissance and market baseline
+
+- Read the authoritative execution specification and RED report from `.canon-scanning/reports/20260927-030002/repositories/Notifying.json` through Console MCP.
+- Re-read Notifying README/manifests/runtime routes, Git state, the mandatory Objecting, Cruding, Viewing, Interfacing and Gating contours, plus the relevant normative Canonization rule text.
+- Current notification infrastructure practice separates transport/provider delivery from notification policy, inbox state, workflow/preference decisions, and durable handoff state. Notifying keeps that boundary: provider delivery remains Delivering-owned.
+- RC-critical work is deterministic contract/canon closure. Richer preference UI, workflow authoring, analytics, localization, experimentation, and provider routing remain growth work.
+
+### Canonization mapping
+
+- Canon038: the canonical OpenAPI YAML must use the Composer subject prefix `notification_`.
+- Canon052: Gating is consumed through Composer; consumer `.gating/` is artifact-only and must not contain copied owner engine/policy source.
+- Canon056/059: every external Notifying API path must mirror the single canonical current OpenAPI source.
+- Canon058: the canonical source belongs at `config/openapi/notification_openapi.yaml`.
+- Canon060: current Notifying API is unversioned; no new non-canonical version placement is introduced.
+- Canon061: owning the OpenAPI source requires a direct runtime `nelmio/api-doc-bundle` dependency.
+- Canon063: every existing Notifying route already declares an explicit bounded HTTP method; the canonical OpenAPI source mirrors those METHOD + path operations.
+- Canon021 remains satisfied: these are notification-specific business endpoints, not generic CRUD grammar/controllers.
+
+### Selected RC-critical work and risks
+
+- Preserve the accidentally copied consumer-local Gating owner tree by moving it intact under ignored `var/`; recreate only the canonical artifact-boundary README under `.gating/`.
+- Add the canonical OpenAPI source for all current Notifying external API routes.
+- Add/register Nelmio API Doc Bundle in development and production manifests without changing Notifying/Delivering responsibility ownership.
+- Preserve the pre-existing `composer.json` license mutation and untracked `LICENSE`/`NOTICE`; they are unrelated to this remediation.
+- Re-run Gating and deterministic Composer/PHP/Symfony/schema gates after dependency resolution, then integrate only coherent in-scope files.
+
+### Growth workstream
+
+- Post-RC candidates remain richer recipient preference UX, workflow/routing authoring, analytics/diagnostics, localization, experimentation, digest/rate controls, and realtime inbox UX.
+- These are not blockers for the current hard-canon remediation.
+
+### Verification and integration result
+
+- Canonical OpenAPI source is `config/openapi/notification_openapi.yaml`; runtime route inventory contains 16 explicit METHOD + path operations and the canonical YAML mirrors the same 16 operations bidirectionally.
+- Direct runtime `nelmio/api-doc-bundle` dependency is declared in development and production Composer manifests; standalone bundle registration is present in `config/bundles.php`.
+- Composer validate --strict --check-lock PASS; Composer audit PASS with no known vulnerability advisories.
+- PHPStan PASS; PHPUnit PASS (16 tests / 174 assertions); PHP-CS-Fixer dry-run PASS; Symfony container lint PASS; YAML lint PASS for 16 files; Doctrine schema parity PASS after 6 migrations / 167 SQL queries.
+- The target's default Gating invocation currently selects the baseline 9-rule profile, so Canon056/058/059/060/061/063 evidence was additionally verified directly against the current Canonization rule contracts and the concrete runtime/OpenAPI inventories rather than being falsely attributed to that baseline gate output.
+- Composer lock refresh also captures the currently required Failing repository closure through Cruding and current resolved sibling references; the full resulting dependency state passed the deterministic suite above.
+- The pre-existing PolyForm license mutation and untracked LICENSE/NOTICE are intentionally excluded from this OpenAPI commit and restored/preserved separately after integration.
+
 ## 2026-09-26 — Canon055 RC terminology closure
 
 ### Reconnaissance and market baseline

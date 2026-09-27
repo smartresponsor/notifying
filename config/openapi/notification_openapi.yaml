@@ -1,0 +1,120 @@
+openapi: 3.1.0
+info:
+  title: Notifying API
+  version: 1.0.0
+  description: >-
+    Canonical contract for Notifying-owned external HTTP operations. Provider
+    transport and delivery-attempt APIs belong to Delivering, not Notifying.
+paths:
+  /api/notification/dispatch/plan:
+    get:
+      operationId: notificationDispatchPlanList
+      summary: Inspect notification dispatch plans.
+      responses:
+        default:
+          description: Dispatch-plan response.
+  /api/notification/dispatch/plan/claim:
+    post:
+      operationId: notificationDispatchPlanClaim
+      summary: Claim handoff-ready dispatch plans.
+      responses:
+        default:
+          description: Claim response.
+  /api/notification/dispatch/plan/handoff:
+    post:
+      operationId: notificationDispatchPlanHandoff
+      summary: Mark claimed dispatch plans as handed off.
+      responses:
+        default:
+          description: Handoff response.
+  /api/notification/dispatch/plan/fail:
+    post:
+      operationId: notificationDispatchPlanFail
+      summary: Mark claimed dispatch plans as failed.
+      responses:
+        default:
+          description: Failure-transition response.
+  /api/notification/dispatch/plan/cancel:
+    post:
+      operationId: notificationDispatchPlanCancel
+      summary: Cancel dispatch plans before physical delivery.
+      responses:
+        default:
+          description: Cancellation response.
+  /api/notification/inbox:
+    get:
+      operationId: notificationInbox
+      summary: List recipient inbox notifications.
+      responses:
+        default:
+          description: Inbox response.
+  /api/notification/need/recognized:
+    post:
+      operationId: notificationNeedRecognized
+      summary: Record a recognized notification need.
+      responses:
+        default:
+          description: Recognized-need response.
+  /api/notification/unread/count:
+    get:
+      operationId: notificationUnreadCount
+      summary: Return the recipient unread count.
+      responses:
+        default:
+          description: Unread-count response.
+  /api/notification/intent:
+    post:
+      operationId: notificationIntentIngest
+      summary: Ingest an authorized notification intent.
+      responses:
+        default:
+          description: Intent-ingestion response.
+  /api/notification/mark/read:
+    post:
+      operationId: notificationMarkRead
+      summary: Mark recipient notifications as read.
+      responses:
+        default:
+          description: Mark-read response.
+  /api/notification/ack:
+    post:
+      operationId: notificationAcknowledge
+      summary: Acknowledge a recipient notification.
+      responses:
+        default:
+          description: Acknowledgement response.
+  /api/notification/need/callback:
+    post:
+      operationId: notificationNeedCallback
+      summary: Request callback handling for a notification need.
+      responses:
+        default:
+          description: Callback-request response.
+  /api/notification/archive:
+    post:
+      operationId: notificationArchive
+      summary: Archive a recipient notification.
+      responses:
+        default:
+          description: Archive response.
+  /api/notification/snooze:
+    post:
+      operationId: notificationSnooze
+      summary: Snooze a recipient notification until a requested time.
+      responses:
+        default:
+          description: Snooze response.
+  /api/notification/pref:
+    post:
+      operationId: notificationPreferenceUpsert
+      summary: Upsert recipient notification preferences.
+      responses:
+        default:
+          description: Preference response.
+  /api/notification/subscription:
+    post:
+      operationId: notificationSubscriptionUpsert
+      summary: Register, update, or disable a recipient device subscription.
+      responses:
+        default:
+          description: Subscription response.

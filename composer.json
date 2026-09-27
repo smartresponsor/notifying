@@ -68,6 +68,16 @@
     },
     {
       "type": "path",
+      "url": "../Failing",
+      "options": {
+        "symlink": true,
+        "versions": {
+          "failing/failure": "dev-master"
+        }
+      }
+    },
+    {
+      "type": "path",
       "url": "../Gating",
       "options": {
         "symlink": true,
@@ -88,6 +98,7 @@
     "doctrine/orm": "^3.3",
     "easycorp/easyadmin-bundle": "^5.0",
     "interfacing/interface": "dev-master",
+    "nelmio/api-doc-bundle": "^5.0",
     "objecting/object": "dev-master",
     "symfony/asset": "^8.1",
     "symfony/console": "^8.1",

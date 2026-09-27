@@ -63,20 +63,47 @@ final class NotificationService
     public function ingest(array $payload, ?string $createdBy = null): array
     {
         $intent = $this->createIntent($payload);
+        self::assertIntentIsValid($intent);
 
+        [$notification, $existing] = $this->resolveNotification($intent, $createdBy);
+        [$recipient, $recipientCreated] = $this->resolveRecipient($notification, $existing, $intent, $createdBy);
+        $dispatchPlans = $this->dispatchPlanner->planForRecipient($recipient, $createdBy);
+        $this->notificationRepository->flush();
+
+        return [
+            'notificationId' => $notification->id(),
+            'recipientEntryId' => $recipient->id(),
+            'recipientKey' => $recipient->recipientKey(),
+            'topic' => $notification->topic(),
+            'status' => $recipient->status()->value,
+            'created' => null === $existing,
+            'recipientCreated' => $recipientCreated,
+            'dispatchPlans' => self::dispatchPlanSummary($dispatchPlans),
+        ];
+    }
+
+    private static function assertIntentIsValid(NotificationIntent $intent): void
+    {
         if ('' === trim($intent->recipientKey)) {
             throw new \InvalidArgumentException('recipientKey is required.');
         }
         if ('' === trim($intent->title)) {
             throw new \InvalidArgumentException('title is required.');
         }
+    }
 
+    /** @return array{0: NotificationEntity, 1: ?NotificationEntity} */
+    private function resolveNotification(NotificationIntent $intent, ?string $createdBy): array
+    {
         $existing = null;
         if (null !== $intent->correlationId && '' !== $intent->correlationId) {
             $existing = $this->notificationRepository->findByCorrelationId($intent->correlationId);
         }
+        if ($existing instanceof NotificationEntity) {
+            return [$existing, $existing];
+        }
 
-        $notification = $existing ?? (new NotificationEntity(
+        $notification = (new NotificationEntity(
             id: self::newUuid(),
             sourceComponent: $intent->sourceComponent,
             eventName: $intent->eventName,
@@ -91,42 +118,36 @@ final class NotificationService
             ->withCorrelationId($intent->correlationId)
             ->withActionUrl($intent->actionUrl);
 
-        if (null === $existing) {
-            $this->notificationRepository->persist($notification);
-        }
+        $this->notificationRepository->persist($notification);
 
+        return [$notification, null];
+    }
+
+    /** @return array{0: NotificationRecipientEntity, 1: bool} */
+    private function resolveRecipient(
+        NotificationEntity $notification,
+        ?NotificationEntity $existing,
+        NotificationIntent $intent,
+        ?string $createdBy,
+    ): array {
         $recipient = null;
         if ($existing instanceof NotificationEntity) {
             $recipient = $this->recipientRepository->findForNotification($existing, $intent->recipientType, $intent->recipientKey);
         }
-
-        $recipientCreated = false;
-        if (!$recipient instanceof NotificationRecipientEntity) {
-            $recipient = new NotificationRecipientEntity(
-                id: self::newUuid(),
-                notification: $notification,
-                recipientType: $intent->recipientType,
-                recipientKey: $intent->recipientKey,
-                createdBy: $createdBy,
-            );
-            $this->recipientRepository->persist($recipient);
-            $recipientCreated = true;
+        if ($recipient instanceof NotificationRecipientEntity) {
+            return [$recipient, false];
         }
 
-        $dispatchPlans = $this->dispatchPlanner->planForRecipient($recipient, $createdBy);
+        $recipient = new NotificationRecipientEntity(
+            id: self::newUuid(),
+            notification: $notification,
+            recipientType: $intent->recipientType,
+            recipientKey: $intent->recipientKey,
+            createdBy: $createdBy,
+        );
+        $this->recipientRepository->persist($recipient);
 
-        $this->notificationRepository->flush();
-
-        return [
-            'notificationId' => $notification->id(),
-            'recipientEntryId' => $recipient->id(),
-            'recipientKey' => $recipient->recipientKey(),
-            'topic' => $notification->topic(),
-            'status' => $recipient->status()->value,
-            'created' => null === $existing,
-            'recipientCreated' => $recipientCreated,
-            'dispatchPlans' => self::dispatchPlanSummary($dispatchPlans),
-        ];
+        return [$recipient, true];
     }
 
     /**

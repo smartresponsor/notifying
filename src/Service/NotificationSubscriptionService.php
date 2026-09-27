@@ -22,6 +22,42 @@ final class NotificationSubscriptionService
      */
     public function registerSubscription(array $payload, ?string $modifiedBy = null): array
     {
+        [$recipientType, $recipientKey, $platform, $appKey, $deviceId, $token, $metadata] = self::subscriptionInput($payload);
+        [$subscription, $created, $previousTokenHash] = $this->resolveRegistration(
+            $recipientType,
+            $recipientKey,
+            $platform,
+            $appKey,
+            $deviceId,
+            $token,
+            $metadata,
+            $modifiedBy,
+        );
+
+        if (isset($payload['expiresAt']) && is_string($payload['expiresAt']) && '' !== $payload['expiresAt']) {
+            $subscription->setExpiresAt(new \DateTimeImmutable($payload['expiresAt']), $modifiedBy);
+        }
+
+        $this->subscriptionRepository->flush();
+        [$retargetedDispatchPlans, $reactivatedDispatchPlans] = $this->reconcileRegistrationDispatchPlans(
+            $subscription,
+            $previousTokenHash,
+            $modifiedBy,
+        );
+
+        return self::subscriptionSummary($subscription) + [
+            'created' => $created,
+            'retargetedDispatchPlans' => $retargetedDispatchPlans,
+            'reactivatedDispatchPlans' => $reactivatedDispatchPlans,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array{0: NotificationRecipientType, 1: string, 2: string, 3: string, 4: string, 5: string, 6: array<string, mixed>}
+     */
+    private static function subscriptionInput(array $payload): array
+    {
         $recipientType = NotificationRecipientType::tryFrom((string) ($payload['recipientType'] ?? 'user')) ?? NotificationRecipientType::User;
         $recipientKey = (string) ($payload['recipientKey'] ?? '');
         $platform = (string) ($payload['platform'] ?? '');
@@ -43,23 +79,29 @@ final class NotificationSubscriptionService
             throw new \InvalidArgumentException('token is required.');
         }
 
+        return [$recipientType, $recipientKey, $platform, $appKey, $deviceId, $token, $metadata];
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     * @return array{0: NotificationSubscriptionEntity, 1: bool, 2: ?string}
+     */
+    private function resolveRegistration(
+        NotificationRecipientType $recipientType,
+        string $recipientKey,
+        string $platform,
+        string $appKey,
+        string $deviceId,
+        string $token,
+        array $metadata,
+        ?string $modifiedBy,
+    ): array {
         $tokenHash = hash('sha256', $token);
         $deviceSubscription = $this->subscriptionRepository->findForDevice($recipientType, $recipientKey, $appKey, $platform, $deviceId);
         $tokenSubscription = $this->subscriptionRepository->findByTokenHash($tokenHash);
-
-        if ($tokenSubscription instanceof NotificationSubscriptionEntity
-            && $deviceSubscription instanceof NotificationSubscriptionEntity
-            && $tokenSubscription !== $deviceSubscription) {
-            throw new \InvalidArgumentException('Push token is already registered to another subscription identity.');
-        }
-        if ($tokenSubscription instanceof NotificationSubscriptionEntity && !$deviceSubscription instanceof NotificationSubscriptionEntity) {
-            throw new \InvalidArgumentException('Push token is already registered to another subscription identity.');
-        }
+        self::assertRegistrationIdentityAvailable($deviceSubscription, $tokenSubscription);
 
         $subscription = $deviceSubscription ?? $tokenSubscription;
-        $created = false;
-        $previousTokenHash = null;
-
         if (!$subscription instanceof NotificationSubscriptionEntity) {
             $subscription = new NotificationSubscriptionEntity(
                 id: self::newUuid(),
@@ -73,19 +115,37 @@ final class NotificationSubscriptionService
                 createdBy: $modifiedBy,
             );
             $this->subscriptionRepository->persist($subscription);
-            $created = true;
-        } else {
-            $previousTokenHash = $subscription->tokenHash();
-            $subscription->rotateToken($token, $modifiedBy);
-            $subscription->touchSeen($modifiedBy);
+
+            return [$subscription, true, null];
         }
 
-        if (isset($payload['expiresAt']) && is_string($payload['expiresAt']) && '' !== $payload['expiresAt']) {
-            $subscription->setExpiresAt(new \DateTimeImmutable($payload['expiresAt']), $modifiedBy);
+        $previousTokenHash = $subscription->tokenHash();
+        $subscription->rotateToken($token, $modifiedBy);
+        $subscription->touchSeen($modifiedBy);
+
+        return [$subscription, false, $previousTokenHash];
+    }
+
+    private static function assertRegistrationIdentityAvailable(
+        ?NotificationSubscriptionEntity $deviceSubscription,
+        ?NotificationSubscriptionEntity $tokenSubscription,
+    ): void {
+        if (!$tokenSubscription instanceof NotificationSubscriptionEntity) {
+            return;
+        }
+        if ($deviceSubscription instanceof NotificationSubscriptionEntity && $tokenSubscription === $deviceSubscription) {
+            return;
         }
 
-        $this->subscriptionRepository->flush();
+        throw new \InvalidArgumentException('Push token is already registered to another subscription identity.');
+    }
 
+    /** @return array{0: list<array<string, mixed>>, 1: list<array<string, mixed>>} */
+    private function reconcileRegistrationDispatchPlans(
+        NotificationSubscriptionEntity $subscription,
+        ?string $previousTokenHash,
+        ?string $modifiedBy,
+    ): array {
         $retargetedDispatchPlans = null === $previousTokenHash ? [] : $this->dispatchPlanService->retargetPushForSubscription(
             recipientType: $subscription->recipientType(),
             recipientKey: $subscription->recipientKey(),
@@ -100,11 +160,7 @@ final class NotificationSubscriptionService
             modifiedBy: $modifiedBy,
         );
 
-        return self::subscriptionSummary($subscription) + [
-            'created' => $created,
-            'retargetedDispatchPlans' => $retargetedDispatchPlans,
-            'reactivatedDispatchPlans' => $reactivatedDispatchPlans,
-        ];
+        return [$retargetedDispatchPlans, $reactivatedDispatchPlans];
     }
 
     public function resolveActiveToken(string $tokenHash, string $platform, string $appKey): ?string

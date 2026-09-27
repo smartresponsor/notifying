@@ -23,95 +23,12 @@ final class NotificationPreferenceService
      */
     public function upsertPreference(array $payload, ?string $modifiedBy = null): array
     {
-        $recipientTypeValue = (string) ($payload['recipientType'] ?? 'user');
-        $recipientType = NotificationRecipientType::tryFrom($recipientTypeValue);
-        if (!$recipientType instanceof NotificationRecipientType) {
-            throw new \InvalidArgumentException('recipientType is invalid.');
-        }
-
-        $recipientKey = trim((string) ($payload['recipientKey'] ?? ''));
-        $topic = trim((string) ($payload['topic'] ?? 'default'));
-
-        if ('' === $recipientKey) {
-            throw new \InvalidArgumentException('recipientKey is required.');
-        }
-        if ('' === $topic) {
-            throw new \InvalidArgumentException('topic is required.');
-        }
-
-        $preference = $this->preferenceRepository->findForTopic($recipientType, $recipientKey, $topic);
-        $created = false;
-        if (!$preference instanceof NotificationPreferenceEntity) {
-            $preference = new NotificationPreferenceEntity(self::newUuid(), $recipientType, $recipientKey, $topic, $modifiedBy);
-            $this->preferenceRepository->persist($preference);
-            $created = true;
-        }
-
-        if (isset($payload['enabledChannels']) && is_array($payload['enabledChannels'])) {
-            $preference->setEnabledChannels(self::channelsFromStrings($payload['enabledChannels']), $modifiedBy);
-        }
-        if (isset($payload['disabledChannels']) && is_array($payload['disabledChannels'])) {
-            $preference->setDisabledChannels(self::channelsFromStrings($payload['disabledChannels']), $modifiedBy);
-        }
-        if (array_key_exists('muted', $payload)) {
-            $muted = self::strictBoolean($payload['muted'], 'muted');
-            if ($muted) {
-                $mutedUntil = null;
-                if (array_key_exists('mutedUntil', $payload) && null !== $payload['mutedUntil'] && '' !== $payload['mutedUntil']) {
-                    $mutedUntil = self::dateTimeFromPayload($payload['mutedUntil'], 'mutedUntil');
-                }
-                $preference->mute($mutedUntil, $modifiedBy);
-            } else {
-                if (array_key_exists('mutedUntil', $payload) && null !== $payload['mutedUntil'] && '' !== $payload['mutedUntil']) {
-                    throw new \InvalidArgumentException('mutedUntil requires muted=true.');
-                }
-                $preference->unmute($modifiedBy);
-            }
-        } elseif (array_key_exists('mutedUntil', $payload)) {
-            throw new \InvalidArgumentException('mutedUntil requires muted to be provided.');
-        }
-        if (array_key_exists('digestEnabled', $payload)) {
-            $preference->setDigest(self::strictBoolean($payload['digestEnabled'], 'digestEnabled'), isset($payload['digestFrequency']) ? (string) $payload['digestFrequency'] : null, $modifiedBy);
-        }
-        if (isset($payload['policy']) && is_array($payload['policy'])) {
-            $preference->setPolicy($payload['policy'], $modifiedBy);
-        }
-        if (array_key_exists('quietHoursStart', $payload) || array_key_exists('quietHoursEnd', $payload) || array_key_exists('timezone', $payload)) {
-            [$quietHoursStart, $quietHoursEnd, $timezone] = self::quietHoursFromPayload($payload);
-            $preference->setQuietHours($quietHoursStart, $quietHoursEnd, $timezone, $modifiedBy);
-        }
-
+        [$preference, $created] = $this->resolvePreference($payload, $modifiedBy);
+        $this->applyPreferencePayload($preference, $payload, $modifiedBy);
         $this->preferenceRepository->flush();
+        $dispatchPlans = $this->reconcilePushDispatchPlans($preference, $modifiedBy);
 
-        $reactivatedDispatchPlans = [];
-        $suppressedDispatchPlans = [];
-        $rescheduledDispatchPlans = [];
-        $pushSuppressionReason = self::pushSuppressionReason($preference);
-        if (null === $pushSuppressionReason) {
-            $reactivatedDispatchPlans = $this->dispatchPlanService->reactivatePushForPreference(
-                recipientType: $preference->recipientType(),
-                recipientKey: $preference->recipientKey(),
-                topic: $preference->topic(),
-                modifiedBy: $modifiedBy,
-            );
-            $rescheduledDispatchPlans = $this->dispatchPlanService->reschedulePushForPreference(
-                recipientType: $preference->recipientType(),
-                recipientKey: $preference->recipientKey(),
-                topic: $preference->topic(),
-                scheduledAt: $preference->pushDeferredUntil(new \DateTimeImmutable()),
-                modifiedBy: $modifiedBy,
-            );
-        } else {
-            $suppressedDispatchPlans = $this->dispatchPlanService->suppressPushForPreference(
-                recipientType: $preference->recipientType(),
-                recipientKey: $preference->recipientKey(),
-                topic: $preference->topic(),
-                reason: $pushSuppressionReason,
-                modifiedBy: $modifiedBy,
-            );
-        }
-
-        return [
+        return array_merge([
             'id' => $preference->getObjectUuid(),
             'recipientType' => $preference->recipientType()->value,
             'recipientKey' => $preference->recipientKey(),
@@ -125,9 +42,134 @@ final class NotificationPreferenceService
             'timezone' => $preference->timezone(),
             'digestEnabled' => $preference->digestEnabled(),
             'created' => $created,
-            'reactivatedDispatchPlans' => $reactivatedDispatchPlans,
-            'suppressedDispatchPlans' => $suppressedDispatchPlans,
-            'rescheduledDispatchPlans' => $rescheduledDispatchPlans,
+        ], $dispatchPlans);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array{0: NotificationPreferenceEntity, 1: bool}
+     */
+    private function resolvePreference(array $payload, ?string $modifiedBy): array
+    {
+        $recipientType = NotificationRecipientType::tryFrom((string) ($payload['recipientType'] ?? 'user'));
+        if (!$recipientType instanceof NotificationRecipientType) {
+            throw new \InvalidArgumentException('recipientType is invalid.');
+        }
+
+        $recipientKey = trim((string) ($payload['recipientKey'] ?? ''));
+        $topic = trim((string) ($payload['topic'] ?? 'default'));
+        if ('' === $recipientKey) {
+            throw new \InvalidArgumentException('recipientKey is required.');
+        }
+        if ('' === $topic) {
+            throw new \InvalidArgumentException('topic is required.');
+        }
+
+        $preference = $this->preferenceRepository->findForTopic($recipientType, $recipientKey, $topic);
+        if ($preference instanceof NotificationPreferenceEntity) {
+            return [$preference, false];
+        }
+
+        $preference = new NotificationPreferenceEntity(self::newUuid(), $recipientType, $recipientKey, $topic, $modifiedBy);
+        $this->preferenceRepository->persist($preference);
+
+        return [$preference, true];
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function applyPreferencePayload(NotificationPreferenceEntity $preference, array $payload, ?string $modifiedBy): void
+    {
+        if (isset($payload['enabledChannels']) && is_array($payload['enabledChannels'])) {
+            $preference->setEnabledChannels(self::channelsFromStrings($payload['enabledChannels']), $modifiedBy);
+        }
+        if (isset($payload['disabledChannels']) && is_array($payload['disabledChannels'])) {
+            $preference->setDisabledChannels(self::channelsFromStrings($payload['disabledChannels']), $modifiedBy);
+        }
+
+        self::applyMutePayload($preference, $payload, $modifiedBy);
+
+        if (array_key_exists('digestEnabled', $payload)) {
+            $preference->setDigest(
+                self::strictBoolean($payload['digestEnabled'], 'digestEnabled'),
+                isset($payload['digestFrequency']) ? (string) $payload['digestFrequency'] : null,
+                $modifiedBy,
+            );
+        }
+        if (isset($payload['policy']) && is_array($payload['policy'])) {
+            $preference->setPolicy($payload['policy'], $modifiedBy);
+        }
+        if (array_key_exists('quietHoursStart', $payload) || array_key_exists('quietHoursEnd', $payload) || array_key_exists('timezone', $payload)) {
+            [$quietHoursStart, $quietHoursEnd, $timezone] = self::quietHoursFromPayload($payload);
+            $preference->setQuietHours($quietHoursStart, $quietHoursEnd, $timezone, $modifiedBy);
+        }
+    }
+
+    /** @param array<string, mixed> $payload */
+    private static function applyMutePayload(NotificationPreferenceEntity $preference, array $payload, ?string $modifiedBy): void
+    {
+        if (!array_key_exists('muted', $payload)) {
+            if (array_key_exists('mutedUntil', $payload)) {
+                throw new \InvalidArgumentException('mutedUntil requires muted to be provided.');
+            }
+
+            return;
+        }
+
+        if (self::strictBoolean($payload['muted'], 'muted')) {
+            $mutedUntil = null;
+            if (array_key_exists('mutedUntil', $payload) && null !== $payload['mutedUntil'] && '' !== $payload['mutedUntil']) {
+                $mutedUntil = self::dateTimeFromPayload($payload['mutedUntil'], 'mutedUntil');
+            }
+            $preference->mute($mutedUntil, $modifiedBy);
+
+            return;
+        }
+
+        if (array_key_exists('mutedUntil', $payload) && null !== $payload['mutedUntil'] && '' !== $payload['mutedUntil']) {
+            throw new \InvalidArgumentException('mutedUntil requires muted=true.');
+        }
+        $preference->unmute($modifiedBy);
+    }
+
+    /**
+     * @return array{
+     *     reactivatedDispatchPlans: array<mixed>,
+     *     suppressedDispatchPlans: array<mixed>,
+     *     rescheduledDispatchPlans: array<mixed>
+     * }
+     */
+    private function reconcilePushDispatchPlans(NotificationPreferenceEntity $preference, ?string $modifiedBy): array
+    {
+        $pushSuppressionReason = self::pushSuppressionReason($preference);
+        if (null !== $pushSuppressionReason) {
+            return [
+                'reactivatedDispatchPlans' => [],
+                'suppressedDispatchPlans' => $this->dispatchPlanService->suppressPushForPreference(
+                    recipientType: $preference->recipientType(),
+                    recipientKey: $preference->recipientKey(),
+                    topic: $preference->topic(),
+                    reason: $pushSuppressionReason,
+                    modifiedBy: $modifiedBy,
+                ),
+                'rescheduledDispatchPlans' => [],
+            ];
+        }
+
+        return [
+            'reactivatedDispatchPlans' => $this->dispatchPlanService->reactivatePushForPreference(
+                recipientType: $preference->recipientType(),
+                recipientKey: $preference->recipientKey(),
+                topic: $preference->topic(),
+                modifiedBy: $modifiedBy,
+            ),
+            'suppressedDispatchPlans' => [],
+            'rescheduledDispatchPlans' => $this->dispatchPlanService->reschedulePushForPreference(
+                recipientType: $preference->recipientType(),
+                recipientKey: $preference->recipientKey(),
+                topic: $preference->topic(),
+                scheduledAt: $preference->pushDeferredUntil(new \DateTimeImmutable()),
+                modifiedBy: $modifiedBy,
+            ),
         ];
     }
 

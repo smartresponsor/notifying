@@ -64,8 +64,21 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
     public function claimHandoffReady(string $claimedBy, string $claimLeaseHash, \DateTimeImmutable $claimedAt, \DateTimeImmutable $claimExpiresAt, int $limit = 100): array
     {
         $limit = max(1, min(500, $limit));
-        $connection = $this->getEntityManager()->getConnection();
-        $connection->executeStatement(
+        $this->recoverExpiredClaims($claimedAt);
+        $candidateIds = $this->handoffReadyCandidateIds($claimedAt, $limit * 2);
+        $claimedIds = $this->claimCandidateIds($candidateIds, $claimedBy, $claimLeaseHash, $claimedAt, $claimExpiresAt, $limit);
+
+        $plans = $this->findByIds($claimedIds);
+        foreach ($plans as $plan) {
+            $this->getEntityManager()->refresh($plan);
+        }
+
+        return $plans;
+    }
+
+    private function recoverExpiredClaims(\DateTimeImmutable $claimedAt): void
+    {
+        $this->getEntityManager()->getConnection()->executeStatement(
             'UPDATE notifying_notification_dispatch_plan SET status = :ready, claimed_by = NULL, claimed_at = NULL, claim_expires_at = NULL, claim_lease_hash = NULL, modified_at = :modifiedAt, modified_by = :modifiedBy WHERE status = :claimed AND claim_expires_at IS NOT NULL AND claim_expires_at <= :now',
             [
                 'ready' => NotificationDispatchStatus::HandoffReady->value,
@@ -75,7 +88,11 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
                 'now' => $claimedAt->format('Y-m-d H:i:s'),
             ],
         );
+    }
 
+    /** @return list<string> */
+    private function handoffReadyCandidateIds(\DateTimeImmutable $claimedAt, int $limit): array
+    {
         $rows = $this->createQueryBuilder('dispatchPlan')
             ->select('dispatchPlan.id')
             ->andWhere('dispatchPlan.status = :status')
@@ -84,20 +101,38 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
             ->setParameter('claimedAt', $claimedAt)
             ->orderBy('dispatchPlan.scheduledAt', 'ASC')
             ->addOrderBy('dispatchPlan.objectAudit.createdAt', 'ASC')
-            ->setMaxResults($limit * 2)
+            ->setMaxResults($limit)
             ->getQuery()
             ->getArrayResult();
 
+        $ids = [];
+        foreach ($rows as $row) {
+            $id = (string) ($row['id'] ?? '');
+            if ('' !== $id) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param list<string> $candidateIds
+     * @return list<string>
+     */
+    private function claimCandidateIds(
+        array $candidateIds,
+        string $claimedBy,
+        string $claimLeaseHash,
+        \DateTimeImmutable $claimedAt,
+        \DateTimeImmutable $claimExpiresAt,
+        int $limit,
+    ): array {
         $claimedIds = [];
         $connection = $this->getEntityManager()->getConnection();
-        foreach ($rows as $row) {
+        foreach ($candidateIds as $id) {
             if (count($claimedIds) >= $limit) {
                 break;
-            }
-
-            $id = (string) ($row['id'] ?? '');
-            if ('' === $id) {
-                continue;
             }
 
             $updated = $connection->executeStatement(
@@ -119,12 +154,7 @@ final class NotificationDispatchPlanRepository extends ServiceEntityRepository
             }
         }
 
-        $plans = $this->findByIds($claimedIds);
-        foreach ($plans as $plan) {
-            $this->getEntityManager()->refresh($plan);
-        }
-
-        return $plans;
+        return $claimedIds;
     }
 
     /**
